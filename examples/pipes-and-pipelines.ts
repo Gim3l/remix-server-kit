@@ -24,7 +24,9 @@ const result = runPipe(
 type CreateUserPipeResult = PipeReturnType<typeof createUserPipe>;
 
 // create a pipeline
-createPipeline('createUser') // the 'createUser' pipe will run
+const pipeline: PipeReturnType<typeof createUserPipe> = createPipeline(
+  'createUser'
+) // the 'createUser' pipe will run
   .action(
     'createUser',
     createUserPipe({

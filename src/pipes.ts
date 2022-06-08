@@ -1,6 +1,7 @@
 import { json } from "@remix-run/node";
 import type { Struct } from "superstruct";
-import { validate  } from "./validation";
+import { any } from "superstruct";
+import { validate } from "./validation";
 
 export type PipelineData<T, S, C, R> = {
   input?: T extends object ? Record<keyof T, unknown> : unknown;
@@ -31,13 +32,13 @@ export class ActionPipeline<CTX> {
     key: string | string[],
     pipe: PipelineData<T, S, CTX, R>
   ) {
-    const actionFunction = ({ throwOnError }: { throwOnError: boolean }) => {
+    const actionsResolver = ({ throwOnError }: { throwOnError: boolean }) => {
       try {
         const input = pipe["input"];
         const schema = pipe["schema"]!;
         const resolve = pipe["resolve"];
 
-        validate(input as any, schema);
+        validate(input as any, schema || any());
 
         return resolve(input as any, this.context as any);
       } catch (err) {
@@ -52,23 +53,36 @@ export class ActionPipeline<CTX> {
       }
     };
 
+    // add pipe resolver to actions object so we can access them by key later
     if (typeof key === "string") {
-      this.actions[key] = actionFunction;
+      this.actions[key] = actionsResolver;
     } else {
       key.forEach((key) => {
-        this.actions[key] = actionFunction;
+        this.actions[key] = actionsResolver;
       });
     }
 
     return this;
   }
 
-  run<T, S, CTX, R>(pipe: PipelineData<T, S, CTX, R>) {
+  async run<T, S, CTX, R>(pipe: PipelineData<T, S, CTX, R>) {
     this.action<T, S, CTX, R>("fallback", pipe);
 
     const resolvedAction = this.actions[this.match] || this.actions["fallback"];
+    let resolvedActionData = await resolvedAction({
+      throwOnError: this.options?.throwOnError,
+    });
 
-    return resolvedAction({ throwOnError: this.options?.throwOnError });
+    console.log({ resolvedActionData });
+
+    if (this.actions[this.match] && !resolvedActionData) {
+      console.log("YEAH");
+      return this.actions.fallback({
+        throwOnError: this.options?.throwOnError,
+      });
+    }
+
+    return resolvedActionData;
   }
 }
 
@@ -92,8 +106,10 @@ export const createPipeline = (
   ...args: ConstructorParameters<typeof ActionPipeline>
 ) => new ActionPipeline(args[0], args[1], { throwOnError: true });
 
-export const runPipe = <T, S, CTX, R>(pipe: PipelineData<T, S, CTX, R>): R => {
-  return createPipeline("default")
+export const runPipe = async <T, S, CTX, R>(
+  pipe: PipelineData<T, S, CTX, R>
+): Promise<R> => {
+  return await createPipeline("default")
     .action("default", pipe)
     .run({
       resolve() {
