@@ -1,5 +1,7 @@
 ## Remix Server Kit
 
+THIS IS STILL IN A ALPHA STAGE AND NOT SUITABLE FOR PRODUCTION (v1 coming soon)
+
 Remix server kit provides useful utilities and simplifies validation for actions and loaders.
 
 ## Installation
@@ -39,6 +41,26 @@ Each time you call validate, it will check that the value is valid according to 
 
 Alternatively, you can catch these errors and return the `Response` and read them using remix's `useActionData` hook. This is useful if you want to display the errors on a form or elsewhere.
 
+```typescript
+  import type { ActionFunction } from "remix"
+  import { validate } from "remix-server-kit";
+  import { string, nonempty } from "superstruct"
+
+  cosnt NonEmptyString = nonempty(string())
+
+  // check if a value is a non-empty string
+  export const action: ActionFunction = async ({request}) => {
+    try {
+    const formData = await request.formData()
+    const name = validate(formData.get("name"), NonEmptyString)
+    const description = validate(formData.get("name"), NonEmptyString)}
+  } catch(err) {
+    if(err instanceof Response && err.statusText === "ValidationError") {
+      return err
+    }
+  }
+```
+
 #### validateAsync
 
 ```typescript
@@ -60,14 +82,14 @@ Alternatively, you can catch these errors and return the `Response` and read the
   }
 ```
 
-#### `Validator`
+#### Validator
 
 ```typescript
   import type { ActionFunction } from "remix"
   import { validateAsync  } from "remix-server-kit";
   import { string, size } from "superstruct"
 
-  const validator = validatePassword = (myString: string) => new Validator(myString, size(string(), 4, 8), "password")
+  const validator = validatePassword = (myString: string) => new Validator(myString, size(string(), 4, 8), "password").execute()
 
   // check if a value is a non-empty string
   export const action: ActionFunction = async ({request}) => {
@@ -89,7 +111,7 @@ Remix Server Kit provides a simple API you can use to not have constantly check 
 #### Example:
 
 ```typescript
-  import { markTaskAsCompleted, deleteTask } from "~/models/tasks"
+  import { changeTaskStatus, deleteTask } from "~/models/tasks"
   import type { ActionFunction } from "remix"
   import { validateAsync  } from "remix-server-kit";
   import { string, size, nonempty } from "superstruct"
@@ -108,7 +130,7 @@ Remix Server Kit provides a simple API you can use to not have constantly check 
         return deleteTodo(todoId)
       }
     })
-    .action("changeTodoStatus",
+    .action("changeTaskStatus",
     {
       validator: new Validator({
         todoId: formData.get("todoId")

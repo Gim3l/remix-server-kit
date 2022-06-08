@@ -1,2 +1,3 @@
 export * from './validation';
-export * from './actionPipe';
+export * from './pipes';
+export type { PipeFunction, PipeReturnType} from  './types';

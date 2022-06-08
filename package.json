@@ -1,5 +1,5 @@
 {
-  "version": "0.1.1",
+  "version": "0.1.2-alpha5",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -36,6 +36,9 @@
   },
   "name": "remix-server-kit",
   "description": "Useful utilities and simplified validation for actions and loaders.",
+  "repository": {
+    "url": "https://github.com/Gim3l/remix-server-kit"
+  },
   "author": "Gimel Dick",
   "module": "dist/remix-server-kit.esm.js",
   "size-limit": [
