@@ -1,9 +1,9 @@
-export type PipeFunction<T> = ReturnType<
+export type ResolverFunction<T> = ReturnType<
   T extends (...args: any) => any ? T : () => unknown
 >;
 
-export type PipeReturnType<T> = ReturnType<
+export type ResolverReturnType<T> = ReturnType<
   T extends (...args: any) => any
-    ? PipeFunction<T>['resolve']
+    ? ResolverFunction<T>['resolve']
     : (...args: any) => any
 >;

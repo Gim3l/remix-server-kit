@@ -1,3 +1,3 @@
-export * from './validation';
-export * from './pipes';
-export type { PipeFunction, PipeReturnType} from  './types';
+export * from "./validation";
+export * from "./resolvers";
+export type { ResolverFunction, ResolverReturnType } from "./types";

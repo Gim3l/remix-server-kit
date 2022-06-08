@@ -30,17 +30,19 @@ export class ActionPipeline<CTX> {
 
   action<T, S, CTX, R>(
     key: string | string[],
-    pipe: PipelineData<T, S, CTX, R>
+    resolver: PipelineData<T, S, CTX, R>,
+    options?: { beforeOutput?: (output: R) => R | unknown }
   ) {
     const actionsResolver = ({ throwOnError }: { throwOnError: boolean }) => {
       try {
-        const input = pipe["input"];
-        const schema = pipe["schema"]!;
-        const resolve = pipe["resolve"];
+        const input = resolver["input"];
+        const schema = resolver["schema"]!;
+        const resolve = resolver["resolve"];
 
         validate(input as any, schema || any());
+        const resolved = resolve(input as any, this.context as any);
 
-        return resolve(input as any, this.context as any);
+        return options?.beforeOutput ? options?.beforeOutput(resolved) : resolved
       } catch (err) {
         if (err instanceof Response) {
           if (err.statusText === "ValidationError") {
@@ -53,7 +55,7 @@ export class ActionPipeline<CTX> {
       }
     };
 
-    // add pipe resolver to actions object so we can access them by key later
+    // add resolver resolve function to actions object so we can access them by key later
     if (typeof key === "string") {
       this.actions[key] = actionsResolver;
     } else {
@@ -87,12 +89,12 @@ export class ActionPipeline<CTX> {
 }
 
 /** Create a pipe */
-export const createPipe = <T, S, C, R>(
-  pipeConfig: Pick<PipelineData<T, S, C, R>, "resolve" | "schema">
+export const createResolver = <T, S, C, R>(
+  resolverConfig: Pick < PipelineData < T, S, C, R >, "resolve" | "schema">
 ): ((
   args: T extends object ? Record<keyof T, unknown> : unknown
 ) => PipelineData<T, S, C, R>) => {
-  const { resolve, schema } = pipeConfig;
+  const { resolve, schema } = resolverConfig;
 
   return (args: T extends object ? Record<keyof T, unknown> : unknown) => ({
     input: args,
@@ -106,7 +108,7 @@ export const createPipeline = (
   ...args: ConstructorParameters<typeof ActionPipeline>
 ) => new ActionPipeline(args[0], args[1], { throwOnError: true });
 
-export const runPipe = async <T, S, CTX, R>(
+export const runResolver = async <T, S, CTX, R>(
   pipe: PipelineData<T, S, CTX, R>
 ): Promise<R> => {
   return await createPipeline("default")
