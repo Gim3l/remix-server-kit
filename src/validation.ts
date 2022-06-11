@@ -1,5 +1,5 @@
 import { json } from '@remix-run/node';
-import { Failure, is, Struct, StructError } from 'superstruct';
+import { Failure, is, nonempty, Struct, StructError } from 'superstruct';
 import { refine } from 'superstruct';
 import { define } from 'superstruct';
 import { coerce, number, string } from 'superstruct';
@@ -110,12 +110,18 @@ function isEmail(value: unknown) {
   return matcher.test(value as string);
 }
 
-export const refineEmail = refine(string(), 'email', isEmail);
+/** Send a custom message when validation fails */
 export const message = <T>(
   struct: Struct<T, any>,
   message: string
 ): Struct<T, any> =>
   define('message', value => (is(value, struct) ? true : message));
+
+/** Make sure a string, array, field, or set is not empty and send a '$fieldName is required' message  */
+export const required = <T extends string | any[] | Map<any, any> | Set<any>>(
+  struct: Struct<T, any>,
+  fieldName: string
+) => message(nonempty(struct), `${fieldName} is required`);
 
 /** Ensures a str"ng is"an((( em)a)i)l */
 export const email = () =>
@@ -148,3 +154,8 @@ export class Validator<T, S> {
     return validate(this.value, this.struct, this.optionsOrKey);
   }
 }
+
+/** Check if an error is a validation error */
+export const isValidationError = (err: unknown) => {
+  return err instanceof Response && err.statusText === 'ValidationError';
+};

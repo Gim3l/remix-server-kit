@@ -1,5 +1,5 @@
 import { json } from '@remix-run/node';
-import { enums, literal, object, string, Struct, union } from 'superstruct';
+import { enums, Struct } from 'superstruct';
 import { validate } from './validation';
 
 class Resolver<T, S, C, R> {
@@ -27,8 +27,6 @@ export type ResolverConfig<T, S, C, R> = {
   ) => R;
 };
 
-
-
 /** Create a resolver */
 export const createResolver = <T, S, C, R>(
   resolverConfig: Pick<ResolverConfig<T, S, C, R>, 'resolve' | 'schema'>
@@ -44,62 +42,66 @@ export const createResolver = <T, S, C, R>(
   ) => new Resolver<T, S, C, R>({ resolve, schema, input: args }, ctx).call();
 };
 
+export type MatcherKeys<
+  T extends MatcherOutput<any, any>
+> = T['resolvers'] extends Record<infer N, unknown> ? N : never;
 
-export type MatcherKeys<T extends MatcherOutput<any, any>> = T["resolvers"] extends Record<
-  infer N,
-  unknown
->
-  ? N
-  : never;
+export type MatcherReturnType<
+  T extends MatcherOutput<any, any>,
+  K extends MatcherKeys<T>
+> = ReturnType<T['resolvers'][K]>;
 
-export type MatcherReturnType<T extends MatcherOutput<any, any>, K extends MatcherKeys<T>> = Awaited<ReturnType<T["resolvers"][K]>>
-
-export type MatcherInput<R> = [resolvers: R];
-export type MatcherOutput<K extends string | 'default' , R extends Record<K, () => unknown>> = {
-  match: <K2 extends K>(key: K2, options?: {toResponse?: boolean, throwValidationErrors?: boolean}) => Promise<ReturnType<R[K2]> | Response>
-  validate: (key: unknown) => MatcherKeys<MatcherOutput<K, R>>
+export type MatcherOutput<
+  K extends string | 'default',
+  R extends Record<K, () => unknown>
+> = {
+  match: <K2 extends K>(
+    key: K2,
+    options?: { toResponse?: boolean; throwValidationErrors?: boolean }
+  ) => Promise<ReturnType<R[K2]> | Response>;
+  validate: (key: unknown) => MatcherKeys<MatcherOutput<K, R>>;
   resolvers: R;
-}
+};
 
 export const createMatcher = <
   K extends string | 'default',
   R extends Record<K, () => unknown>
 >(
-  ...args: MatcherInput<R>
+  resolvers: R
 ): MatcherOutput<K, R> => {
-  const [resolvers] = args
-
   return {
     resolvers,
-    async match<K2 extends K>(key: K2, options?: {toResponse?: boolean, throwValidationErrors?: boolean}): Promise<ReturnType<R[K2]> | Response> {
+    async match<K2 extends K>(
+      key: K2,
+      options?: { toResponse?: boolean; throwValidationErrors?: boolean }
+    ): Promise<ReturnType<R[K2]> | Response> {
       try {
-      const result = await resolvers[key]()
+        const result = await resolvers[key]();
 
-      if (options?.toResponse === false) {
-        return result as Promise<ReturnType<R[K2]>>
-      } else {
-        if (result instanceof Response) {
-          return result
+        if (options?.toResponse === false) {
+          return result as Promise<ReturnType<R[K2]>>;
+        } else {
+          if (result instanceof Response) {
+            return result;
+          }
+
+          return json(result, { status: 400 });
+        }
+      } catch (err) {
+        if (err instanceof Response && err.statusText === 'ValidationError') {
+          if (options?.throwValidationErrors === false) throw err;
+          console.log('RETURNING');
+          return err;
         }
 
-        return json(result, {status: 400})
-      }  
-      } catch (err) {
-        if (err instanceof Response && err.statusText === "ValidationError") {
-         if(options?.throwValidationErrors === false) throw err
-          console.log("RETURNING")
-         return err
-        } 
-
-        throw err
+        throw err;
       }
-      
     },
     /** Ensures the supplied key matches the keys  */
-    validate(key): MatcherKeys<MatcherOutput<K, R>>  {
-      const keys =  Object.keys(resolvers)
-      const result = validate(key, enums(keys))
-      return result as MatcherKeys<MatcherOutput<K, R>>
-    }
+    validate(key): MatcherKeys<MatcherOutput<K, R>> {
+      const keys = Object.keys(resolvers);
+      const result = validate(key, enums(keys));
+      return result as MatcherKeys<MatcherOutput<K, R>>;
+    },
   };
 };
