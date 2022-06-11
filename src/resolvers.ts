@@ -1,9 +1,24 @@
-import { json } from "@remix-run/node";
-import type { Struct } from "superstruct";
-import { any } from "superstruct";
-import { validate } from "./validation";
+import { json } from '@remix-run/node';
+import { enums, literal, object, string, Struct, union } from 'superstruct';
+import { validate } from './validation';
 
-export type PipelineData<T, S, C, R> = {
+class Resolver<T, S, C, R> {
+  resolver: ResolverConfig<T, S, C, R>;
+  ctx?: C;
+
+  constructor(resolver: ResolverConfig<T, S, C, R>, ctx?: C) {
+    this.resolver = resolver;
+    this.ctx = ctx;
+  }
+
+  call() {
+    const schema = this.resolver.schema;
+    const validateInput = validate(this.resolver.input as any, schema as any);
+    return this.resolver.resolve(validateInput as any, this.ctx as any);
+  }
+}
+
+export type ResolverConfig<T, S, C, R> = {
   input?: T extends object ? Record<keyof T, unknown> : unknown;
   schema?: Struct<T, S>;
   resolve: (
@@ -12,110 +27,79 @@ export type PipelineData<T, S, C, R> = {
   ) => R;
 };
 
-export class ActionPipeline<CTX> {
-  private actions: any = {};
-  private match: string;
-  private context?: CTX;
-  private options?: { throwOnError: boolean };
 
-  constructor(
-    match: string = "default",
-    context?: CTX,
-    options?: { throwOnError: boolean }
-  ) {
-    this.match = match;
-    this.context = context;
-    this.options = options;
-  }
 
-  action<T, S, CTX, R>(
-    key: string | string[],
-    resolver: PipelineData<T, S, CTX, R>,
-    options?: { beforeOutput?: (output: R) => R | unknown }
-  ) {
-    const actionsResolver = ({ throwOnError }: { throwOnError: boolean }) => {
-      try {
-        const input = resolver["input"];
-        const schema = resolver["schema"]!;
-        const resolve = resolver["resolve"];
-
-        validate(input as any, schema || any());
-        const resolved = resolve(input as any, this.context as any);
-
-        return options?.beforeOutput ? options?.beforeOutput(resolved) : resolved
-      } catch (err) {
-        if (err instanceof Response) {
-          if (err.statusText === "ValidationError") {
-            if (throwOnError) throw err;
-            return err;
-          }
-        }
-
-        throw err;
-      }
-    };
-
-    // add resolver resolve function to actions object so we can access them by key later
-    if (typeof key === "string") {
-      this.actions[key] = actionsResolver;
-    } else {
-      key.forEach((key) => {
-        this.actions[key] = actionsResolver;
-      });
-    }
-
-    return this;
-  }
-
-  async run<T, S, CTX, R>(pipe: PipelineData<T, S, CTX, R>) {
-    this.action<T, S, CTX, R>("fallback", pipe);
-
-    const resolvedAction = this.actions[this.match] || this.actions["fallback"];
-    let resolvedActionData = await resolvedAction({
-      throwOnError: this.options?.throwOnError,
-    });
-
-    console.log({ resolvedActionData });
-
-    if (this.actions[this.match] && !resolvedActionData) {
-      console.log("YEAH");
-      return this.actions.fallback({
-        throwOnError: this.options?.throwOnError,
-      });
-    }
-
-    return resolvedActionData;
-  }
-}
-
-/** Create a pipe */
+/** Create a resolver */
 export const createResolver = <T, S, C, R>(
-  resolverConfig: Pick < PipelineData < T, S, C, R >, "resolve" | "schema">
+  resolverConfig: Pick<ResolverConfig<T, S, C, R>, 'resolve' | 'schema'>
 ): ((
-  args: T extends object ? Record<keyof T, unknown> : unknown
-) => PipelineData<T, S, C, R>) => {
+  args?: T extends object ? Record<keyof T, unknown> : unknown,
+  ctx?: C
+) => R) => {
   const { resolve, schema } = resolverConfig;
 
-  return (args: T extends object ? Record<keyof T, unknown> : unknown) => ({
-    input: args,
-    resolve,
-    schema,
-  });
+  return (
+    args?: T extends object ? Record<keyof T, unknown> : unknown,
+    ctx?: C
+  ) => new Resolver<T, S, C, R>({ resolve, schema, input: args }, ctx).call();
 };
 
-/** Create a pipeline to run pipes conditionally */
-export const createPipeline = (
-  ...args: ConstructorParameters<typeof ActionPipeline>
-) => new ActionPipeline(args[0], args[1], { throwOnError: true });
 
-export const runResolver = async <T, S, CTX, R>(
-  pipe: PipelineData<T, S, CTX, R>
-): Promise<R> => {
-  return await createPipeline("default")
-    .action("default", pipe)
-    .run({
-      resolve() {
-        return json({});
-      },
-    });
+export type MatcherKeys<T extends MatcherOutput<any, any>> = T["resolvers"] extends Record<
+  infer N,
+  unknown
+>
+  ? N
+  : never;
+
+export type MatcherReturnType<T extends MatcherOutput<any, any>, K extends MatcherKeys<T>> = Awaited<ReturnType<T["resolvers"][K]>>
+
+export type MatcherInput<R> = [resolvers: R];
+export type MatcherOutput<K extends string | 'default' , R extends Record<K, () => unknown>> = {
+  match: <K2 extends K>(key: K2, options?: {toResponse?: boolean, throwValidationErrors?: boolean}) => Promise<ReturnType<R[K2]> | Response>
+  validate: (key: unknown) => MatcherKeys<MatcherOutput<K, R>>
+  resolvers: R;
+}
+
+export const createMatcher = <
+  K extends string | 'default',
+  R extends Record<K, () => unknown>
+>(
+  ...args: MatcherInput<R>
+): MatcherOutput<K, R> => {
+  const [resolvers] = args
+
+  return {
+    resolvers,
+    async match<K2 extends K>(key: K2, options?: {toResponse?: boolean, throwValidationErrors?: boolean}): Promise<ReturnType<R[K2]> | Response> {
+      try {
+      const result = await resolvers[key]()
+
+      if (options?.toResponse === false) {
+        return result as Promise<ReturnType<R[K2]>>
+      } else {
+        if (result instanceof Response) {
+          return result
+        }
+
+        return json(result, {status: 400})
+      }  
+      } catch (err) {
+        if (err instanceof Response && err.statusText === "ValidationError") {
+         if(options?.throwValidationErrors === false) throw err
+          console.log("RETURNING")
+         return err
+        } 
+
+        throw err
+      }
+      
+    },
+    /** Ensures the supplied key matches the keys  */
+    validate(key): MatcherKeys<MatcherOutput<K, R>>  {
+      const keys =  Object.keys(resolvers)
+      const result = validate(key, enums(keys))
+      return result as MatcherKeys<MatcherOutput<K, R>>
+    }
+  };
 };

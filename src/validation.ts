@@ -1,9 +1,9 @@
-import {  json } from "@remix-run/node";
-import type { Failure, Struct, StructError } from "superstruct";
-import { refine } from "superstruct";
-import { define } from "superstruct";
-import { coerce, number, string } from "superstruct";
-import { validate as validateStruct } from "superstruct";
+import { json } from '@remix-run/node';
+import { Failure, is, Struct, StructError } from 'superstruct';
+import { refine } from 'superstruct';
+import { define } from 'superstruct';
+import { coerce, number, string } from 'superstruct';
+import { validate as validateStruct } from 'superstruct';
 
 export type ValidateOptions = {
   key?: string;
@@ -40,18 +40,18 @@ function handleError(
   let error: { name?: string; message: string } = { message };
 
   if (optionsOrKey) {
-    error["name"] =
-      typeof optionsOrKey === "string" ? optionsOrKey : optionsOrKey?.key || "";
+    error['name'] =
+      typeof optionsOrKey === 'string' ? optionsOrKey : optionsOrKey?.key || '';
   }
 
-  failures().forEach((failure) => {
+  failures().forEach(failure => {
     if (failure.key) {
       let message = failure.message;
 
-      if (typeof optionsOrKey === "object") {
+      if (typeof optionsOrKey === 'object') {
         let customMessage = optionsOrKey?.messages?.[failure.key];
 
-        if (typeof customMessage === "function") {
+        if (typeof customMessage === 'function') {
           message = customMessage(failure);
         }
       }
@@ -66,20 +66,20 @@ function handleError(
   } = {};
 
   if (error) {
-    response["error"] = error;
+    response['error'] = error;
   }
 
   if (Object.keys(errors).length) {
-    response["errors"] = errors;
+    response['errors'] = errors;
   }
 
   const status =
-    typeof optionsOrKey === "object" ? optionsOrKey?.status || 400 : 400;
+    typeof optionsOrKey === 'object' ? optionsOrKey?.status || 400 : 400;
 
-  if (typeof optionsOrKey === "object" && optionsOrKey?.defaultError) {
+  if (typeof optionsOrKey === 'object' && optionsOrKey?.defaultError) {
     throw err;
   } else {
-    throw json(response, { status, statusText: "ValidationError" });
+    throw json(response, { status, statusText: 'ValidationError' });
   }
 }
 
@@ -97,13 +97,12 @@ export function validateAsync<T, S>(
   });
 }
 export const stringToNumber = () =>
-  coerce(number(), string(), (value) => Number(value));
+  coerce(number(), string(), value => Number(value));
 
 export const numberToString = () =>
-  coerce(string(), number(), (value) => String(value));
+  coerce(string(), number(), value => String(value));
 
-var matcher =
-  /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+var matcher = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
 function isEmail(value: unknown) {
   if (string.length > 320) return false;
@@ -111,16 +110,21 @@ function isEmail(value: unknown) {
   return matcher.test(value as string);
 }
 
-export const refineEmail = refine(string(), "email", isEmail);
+export const refineEmail = refine(string(), 'email', isEmail);
+export const message = <T>(
+  struct: Struct<T, any>,
+  message: string
+): Struct<T, any> =>
+  define('message', value => (is(value, struct) ? true : message));
 
-/** Ensures a string is an email */
+/** Ensures a str"ng is"an((( em)a)i)l */
 export const email = () =>
-  define<string>("email", (value) => {
+  define<string>('email', value => {
     const pass = isEmail(value);
     return (
       pass ||
       `Expected a valid email address but received ${
-        value ? `\`${value}\`` : "an empty string"
+        value ? `\`${value}\`` : 'an empty string'
       } `
     );
   });
@@ -144,4 +148,3 @@ export class Validator<T, S> {
     return validate(this.value, this.struct, this.optionsOrKey);
   }
 }
-
