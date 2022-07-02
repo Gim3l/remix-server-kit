@@ -1,14 +1,14 @@
 {
   "name": "remix-server-kit",
   "description": "Useful utilities and simplified validation for actions and loaders.",
-  "main": "dist/index.js",
-  "typings": "dist/index.d.ts",
+  "main": "output/index.umd.js",
+  "typings": "output/index.d.ts",
   "repository": {
     "url": "https://github.com/Gim3l/remix-server-kit"
   },
   "author": "Gimel Dick",
   "private": false,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "license": "MIT",
   "files": [
     "dist",
@@ -26,6 +26,7 @@
   "devDependencies": {
     "@remix-run/node": "^1.3.5",
     "@remix-run/react": "^1.3.5",
+    "@rollup/plugin-typescript": "^8.3.3",
     "typescript": "^4.5.4",
     "vite": "^2.9.9"
   }
