@@ -8,7 +8,7 @@
   },
   "author": "Gimel Dick",
   "private": false,
-  "version": "1.1.5-canary.4",
+  "version": "1.1.5",
   "license": "MIT",
   "files": [
     "dist",
