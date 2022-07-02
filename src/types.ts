@@ -1,3 +1,6 @@
+import { Struct } from 'superstruct';
+import { ContextResolver } from './resolvers';
+
 export type ResolverFunction<T> = ReturnType<
   T extends (...args: any) => any ? T : () => unknown
 >;
@@ -8,11 +11,9 @@ export type ResolverReturnType<T> = ReturnType<
     : (...args: any) => any
 >;
 
-// export necessary atm, project wont compile otherwise
-export type AwaitedPromise<T> = T extends null | undefined
-  ? T // special case for `null | undefined` when not in `--strictNullChecks` mode
-  : T extends object & { then(onfulfilled: infer F): any } // `await` only unwraps object types with a callable `then`. Non-object types are not unwrapped
-  ? F extends (value: infer V, ...args: any) => any // if the argument to `then` is callable, extracts the first argument
-    ? Awaited<V> // recursively unwrap the value
-    : never // the argument to `then` was not callable
-  : T;
+export type ResolverConfig<T, S, _C, R, CR> = {
+  input?: T extends object ? Record<keyof T, unknown> : unknown;
+  schema?: Struct<T, S>;
+  resolveContext?: ContextResolver<CR>;
+  resolve: (validatedInput: T extends null ? null : T, ctx: Awaited<CR>) => R;
+};

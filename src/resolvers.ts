@@ -1,6 +1,6 @@
 import { json } from '@remix-run/node';
-import { AwaitedPromise } from './types';
-import { enums, Struct } from 'superstruct';
+import { ResolverConfig } from './types';
+import { enums } from 'superstruct';
 import { validate } from './validation';
 
 class Resolver<T, S, C, R, CR> {
@@ -33,16 +33,6 @@ class Resolver<T, S, C, R, CR> {
 
 type ContextResolverArgs = { request: Request; data?: unknown };
 export type ContextResolver<CR> = (args: ContextResolverArgs) => CR;
-
-export type ResolverConfig<T, S, _C, R, CR> = {
-  input?: T extends object ? Record<keyof T, unknown> : unknown;
-  schema?: Struct<T, S>;
-  resolveContext?: ContextResolver<CR>;
-  resolve: (
-    validatedInput: T extends null ? null : T,
-    ctx: AwaitedPromise<CR>
-  ) => R;
-};
 
 /** Create a resolver */
 export const createResolver = <T, S, C, R, CR>(
