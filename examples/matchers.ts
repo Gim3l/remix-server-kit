@@ -4,7 +4,7 @@ import { array, number, string } from 'superstruct';
 import { createMatcher, createResolver } from './../src/resolvers';
 
 const addCtxResolver = createContextResolver({
-  resolve: () => {
+  resolve: async () => {
     return 'hello';
   },
 });

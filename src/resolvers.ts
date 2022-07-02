@@ -14,7 +14,7 @@ class Resolver<T, S, C, R, CR> {
     this.ctxArgs = ctxArgs;
   }
 
-  call() {
+  async call() {
     const schema = this.resolver.schema;
     const validateInput = validate(this.resolver.input as any, schema as any);
     let ctx = null;
@@ -49,17 +49,19 @@ export const createResolver = <T, S, C, R, CR>(
 ): ((
   args?: T extends object ? Record<keyof T, unknown> : unknown,
   ctxArgs?: ContextResolverArgs
-) => R) => {
+) => Promise<R>) => {
   const { resolve, schema } = resolverConfig;
 
-  return (
+  const res = async (
     args?: T extends object ? Record<keyof T, unknown> : unknown,
     ctxArgs?: ContextResolverArgs
   ) =>
-    new Resolver<T, S, C, R, CR>(
+    await new Resolver<T, S, C, R, CR>(
       { resolve, schema, input: args },
       ctxArgs
     ).call();
+
+  return res;
 };
 
 export type MatcherKeys<
