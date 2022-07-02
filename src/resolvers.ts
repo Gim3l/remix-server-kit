@@ -20,10 +20,10 @@ class Resolver<T, S, C, R, CR> {
     let ctx = null;
 
     if (this.resolver.resolveContext && this.ctxArgs) {
-      ctx = this.resolver.resolveContext(
-        this.ctxArgs.request,
-        this.ctxArgs?.data
-      );
+      ctx = this.resolver.resolveContext({
+        request: this.ctxArgs.request,
+        data: this.ctxArgs?.data,
+      });
     }
 
     return this.resolver.resolve(validateInput as any, ctx as any);
@@ -31,7 +31,7 @@ class Resolver<T, S, C, R, CR> {
 }
 
 type ContextResolverArgs = { request: Request; data?: unknown };
-export type ContextResolver<CR> = (request: Request, data?: unknown) => CR;
+export type ContextResolver<CR> = (args: ContextResolverArgs) => CR;
 
 export type ResolverConfig<T, S, _C, R, CR> = {
   input?: T extends object ? Record<keyof T, unknown> : unknown;
