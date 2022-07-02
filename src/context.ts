@@ -1,4 +1,4 @@
-import { ContextResolver } from './resolvers';
+import { ContextResolver } from './types';
 
 export const createContextResolver = <T>({
   resolve,

@@ -1,67 +1,42 @@
 {
-  "version": "1.0.6",
-  "license": "MIT",
-  "main": "dist/index.js",
+  "name": "remix-server-kit",
+  "description": "Useful utilities and simplified validation for actions and loaders.",
+  "main": "dist/index.umd.js",
   "typings": "dist/index.d.ts",
+  "repository": {
+    "url": "https://github.com/Gim3l/remix-server-kit"
+  },
+  "author": "Gimel Dick",
+  "private": false,
+  "version": "1.1.5",
+  "license": "MIT",
   "files": [
     "dist",
     "src"
   ],
-  "engines": {
-    "node": ">=10"
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.umd.js"
+    }
   },
+  "module": "dist/remix-server-kit.es.js",
   "scripts": {
-    "start": "tsdx watch",
-    "build": "tsdx build",
-    "test": "tsdx test",
-    "lint": "tsdx lint",
-    "prepare": "tsdx build",
-    "size": "size-limit",
-    "analyze": "size-limit --why"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "peerDependencies": {
     "@remix-run/node": "^1.1.1",
     "superstruct": "^0.16.0"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "tsdx lint"
-    }
-  },
-  "prettier": {
-    "printWidth": 80,
-    "semi": true,
-    "singleQuote": true,
-    "trailingComma": "es5"
-  },
-  "name": "remix-server-kit",
-  "description": "Useful utilities and simplified validation for actions and loaders.",
-  "repository": {
-    "url": "https://github.com/Gim3l/remix-server-kit"
-  },
-  "author": "Gimel Dick",
-  "module": "dist/remix-server-kit.esm.js",
-  "size-limit": [
-    {
-      "path": "dist/remix-server-kit.cjs.production.min.js",
-      "limit": "10 KB"
-    },
-    {
-      "path": "dist/remix-server-kit.esm.js",
-      "limit": "10 KB"
-    }
-  ],
   "devDependencies": {
     "@remix-run/node": "^1.3.5",
     "@remix-run/react": "^1.3.5",
-    "@size-limit/preset-small-lib": "^7.0.8",
-    "husky": "^8.0.1",
-    "react": "^17.0.2",
-    "size-limit": "^7.0.8",
+    "@rollup/plugin-typescript": "^8.3.3",
     "superstruct": "^0.16.0",
-    "tsdx": "^0.14.1",
     "tslib": "^2.4.0",
-    "typescript": "^4.7.3"
-  },
-  "dependencies": {}
+    "typescript": "^4.5.4",
+    "vite": "^2.9.9"
+  }
 }

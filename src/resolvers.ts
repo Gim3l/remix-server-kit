@@ -1,5 +1,5 @@
 import { json } from '@remix-run/node';
-import { ResolverConfig } from './types';
+import { ContextResolverArgs, ResolverConfig } from './types';
 import { enums } from 'superstruct';
 import { validate } from './validation';
 
@@ -30,9 +30,6 @@ class Resolver<T, S, C, R, CR> {
     return this.resolver.resolve(validateInput as any, ctx as any);
   }
 }
-
-type ContextResolverArgs = { request: Request; data?: unknown };
-export type ContextResolver<CR> = (args: ContextResolverArgs) => CR;
 
 /** Create a resolver */
 export const createResolver = <T, S, C, R, CR>(
