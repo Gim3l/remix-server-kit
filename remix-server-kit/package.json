@@ -8,12 +8,13 @@
   },
   "author": "Gimel Dick",
   "private": false,
-  "version": "1.1.5-canary1",
+  "version": "1.1.5-canary.2",
   "license": "MIT",
   "files": [
     "dist",
     "src"
   ],
+  "module": "dist/remix-server-kit.umd.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
