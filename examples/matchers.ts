@@ -1,10 +1,18 @@
+import { createContextResolver } from './../src/context';
 import { json } from '@remix-run/node';
 import { array, number, string } from 'superstruct';
 import { createMatcher, createResolver } from './../src/resolvers';
 
+const addCtxResolver = createContextResolver({
+  resolve: () => {
+    return 'hello';
+  },
+});
+
 const add = createResolver({
   schema: array(number()),
-  resolve(values) {
+  resolveContext: addCtxResolver,
+  resolve(values, ctx) {
     return values.reduce((acc, value) => acc + value, 0);
   },
 });

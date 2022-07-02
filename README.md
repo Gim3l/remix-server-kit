@@ -96,8 +96,45 @@ import { object, string, date } from 'superstruct';
 
 const createTask = createResolver({
   schema: object({ name: string(), deadline: date() }),
-  resolve(name, deadline) {
+  resolve({ name, deadline }) {
     return { name, deadline, createdAt: new Date().toISOString() };
+  },
+});
+
+// call the resolver as any other fuction
+const task = createTask({ name: 'Wash the dishes', deadline: new Date() });
+```
+
+## Adding context to your resolvers
+
+You can reuse logic across resolvers. Each resolver can accept a function that will populate the context variable of the resolver. This means that you can provide context directly form your actions and loaders to the resolver. The context variable will be **typed** automatically.
+
+```typescript
+import { createResolver, createContextResolver } from 'remix-server-kit';
+import { object, string, date } from 'superstruct';
+import { db } from '~/db.server';
+
+const authContext = createContextResolver({
+  resolve() {
+    return { userId: number };
+  },
+});
+
+const createTask = createResolver({
+  schema: object({ name: string(), deadline: date() }),
+  resolveContext: authContext,
+  // typeof context = { userId: number }
+  async resolve({ name, deadline }, context) {
+    const data = {
+      userId: context.userId,
+      name,
+      deadline,
+      createdAt: new Date().toISOString(),
+    };
+
+    const task = await db.task.createTask(data);
+
+    return task;
   },
 });
 

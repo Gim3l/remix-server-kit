@@ -2,44 +2,64 @@ import { json } from '@remix-run/node';
 import { enums, Struct } from 'superstruct';
 import { validate } from './validation';
 
-class Resolver<T, S, C, R> {
-  resolver: ResolverConfig<T, S, C, R>;
-  ctx?: C;
+class Resolver<T, S, C, R, CR> {
+  resolver: ResolverConfig<T, S, C, R, CR>;
+  ctxArgs?: ContextResolverArgs;
 
-  constructor(resolver: ResolverConfig<T, S, C, R>, ctx?: C) {
+  constructor(
+    resolver: ResolverConfig<T, S, C, R, CR>,
+    ctxArgs?: ContextResolverArgs
+  ) {
     this.resolver = resolver;
-    this.ctx = ctx;
+    this.ctxArgs = ctxArgs;
   }
 
   call() {
     const schema = this.resolver.schema;
     const validateInput = validate(this.resolver.input as any, schema as any);
-    return this.resolver.resolve(validateInput as any, this.ctx as any);
+    let ctx = null;
+
+    if (this.resolver.resolveContext && this.ctxArgs) {
+      ctx = this.resolver.resolveContext(
+        this.ctxArgs.request,
+        this.ctxArgs?.data
+      );
+    }
+
+    return this.resolver.resolve(validateInput as any, ctx as any);
   }
 }
 
-export type ResolverConfig<T, S, C, R> = {
+type ContextResolverArgs = { request: Request; data?: unknown };
+export type ContextResolver<CR> = (request: Request, data?: unknown) => CR;
+
+export type ResolverConfig<T, S, _C, R, CR> = {
   input?: T extends object ? Record<keyof T, unknown> : unknown;
   schema?: Struct<T, S>;
-  resolve: (
-    validatedInput: T extends null ? null : T,
-    ctx: C extends null ? null : C
-  ) => R;
+  resolveContext?: ContextResolver<CR>;
+  resolve: (validatedInput: T extends null ? null : T, ctx: CR) => R;
 };
 
 /** Create a resolver */
-export const createResolver = <T, S, C, R>(
-  resolverConfig: Pick<ResolverConfig<T, S, C, R>, 'resolve' | 'schema'>
+export const createResolver = <T, S, C, R, CR>(
+  resolverConfig: Pick<
+    ResolverConfig<T, S, C, R, CR>,
+    'resolve' | 'schema' | 'resolveContext'
+  >
 ): ((
   args?: T extends object ? Record<keyof T, unknown> : unknown,
-  ctx?: C
+  ctxArgs?: ContextResolverArgs
 ) => R) => {
   const { resolve, schema } = resolverConfig;
 
   return (
     args?: T extends object ? Record<keyof T, unknown> : unknown,
-    ctx?: C
-  ) => new Resolver<T, S, C, R>({ resolve, schema, input: args }, ctx).call();
+    ctxArgs?: ContextResolverArgs
+  ) =>
+    new Resolver<T, S, C, R, CR>(
+      { resolve, schema, input: args },
+      ctxArgs
+    ).call();
 };
 
 export type MatcherKeys<
