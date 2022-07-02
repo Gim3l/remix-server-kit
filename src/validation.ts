@@ -1,6 +1,5 @@
 import { json } from '@remix-run/node';
 import { Failure, is, nonempty, Struct, StructError } from 'superstruct';
-import { refine } from 'superstruct';
 import { define } from 'superstruct';
 import { coerce, number, string } from 'superstruct';
 import { validate as validateStruct } from 'superstruct';
