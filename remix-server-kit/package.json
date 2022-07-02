@@ -1,14 +1,14 @@
 {
   "name": "remix-server-kit",
   "description": "Useful utilities and simplified validation for actions and loaders.",
-  "main": "output/index.umd.js",
-  "typings": "output/index.d.ts",
+  "main": "dist/index.umd.js",
+  "typings": "dist/index.d.ts",
   "repository": {
     "url": "https://github.com/Gim3l/remix-server-kit"
   },
   "author": "Gimel Dick",
   "private": false,
-  "version": "1.1.5-canary.3",
+  "version": "1.1.5-canary.4",
   "license": "MIT",
   "files": [
     "dist",
@@ -20,7 +20,7 @@
       "require": "./dist/index.umd.js"
     }
   },
-  "module": "dist/remix-server-kit.umd.js",
+  "module": "dist/remix-server-kit.es.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
