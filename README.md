@@ -122,7 +122,7 @@ const authContext = createContextResolver({
 
 const createTask = createResolver({
   schema: object({ name: string(), deadline: date() }),
-  resolveContext: authContext,
+  context: authContext,
   // typeof context = { userId: number }
   async resolve({ name, deadline }, context) {
     const data = {

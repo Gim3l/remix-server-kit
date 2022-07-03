@@ -3,7 +3,7 @@ import { createResolver } from "~/lib/remix-server-kit/src";
 
 export const getList = createResolver({
   schema: number(),
-  contextResolver: ({ request }) => {
+  context: ({ request }) => {
     return { user: { userId: 20 } };
   },
   resolve(data, ctx) {

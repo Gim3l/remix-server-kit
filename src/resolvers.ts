@@ -20,8 +20,8 @@ class Resolver<T, S, C, R, CR> {
     const validateInput = validate(this.resolver.input as any, schema as any);
     let ctx = null;
 
-    if (this.resolver.contextResolver && this.ctxArgs) {
-      ctx = await this.resolver.contextResolver({
+    if (this.resolver.context && this.ctxArgs) {
+      ctx = await this.resolver.context({
         request: this.ctxArgs.request,
         data: this.ctxArgs?.data,
       });
@@ -35,20 +35,20 @@ class Resolver<T, S, C, R, CR> {
 export const createResolver = <T, S, C, R, CR>(
   resolverConfig: Pick<
     ResolverConfig<T, S, C, R, CR>,
-    "resolve" | "schema" | "contextResolver"
+    "resolve" | "schema" | "context"
   >
 ): ((
   args?: T extends object ? Record<keyof T, unknown> : unknown,
   ctxArgs?: ContextResolverArgs
 ) => Promise<R>) => {
-  const { resolve, schema, contextResolver } = resolverConfig;
+  const { resolve, schema, context } = resolverConfig;
 
   const res = async (
     args?: T extends object ? Record<keyof T, unknown> : unknown,
     ctxArgs?: ContextResolverArgs
   ) =>
     await new Resolver<T, S, C, R, CR>(
-      { resolve, schema, input: args, contextResolver },
+      { resolve, schema, input: args, context },
       ctxArgs
     ).call();
 
