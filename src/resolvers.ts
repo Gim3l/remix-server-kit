@@ -20,8 +20,8 @@ class Resolver<T, S, C, R, CR> {
     const validateInput = validate(this.resolver.input as any, schema as any);
     let ctx = null;
 
-    if (this.resolver.resolveContext && this.ctxArgs) {
-      ctx = await this.resolver.resolveContext({
+    if (this.resolver.contextResolver && this.ctxArgs) {
+      ctx = await this.resolver.contextResolver({
         request: this.ctxArgs.request,
         data: this.ctxArgs?.data,
       });
@@ -35,20 +35,20 @@ class Resolver<T, S, C, R, CR> {
 export const createResolver = <T, S, C, R, CR>(
   resolverConfig: Pick<
     ResolverConfig<T, S, C, R, CR>,
-    "resolve" | "schema" | "resolveContext"
+    "resolve" | "schema" | "contextResolver"
   >
 ): ((
   args?: T extends object ? Record<keyof T, unknown> : unknown,
   ctxArgs?: ContextResolverArgs
 ) => Promise<R>) => {
-  const { resolve, schema } = resolverConfig;
+  const { resolve, schema, contextResolver } = resolverConfig;
 
   const res = async (
     args?: T extends object ? Record<keyof T, unknown> : unknown,
     ctxArgs?: ContextResolverArgs
   ) =>
     await new Resolver<T, S, C, R, CR>(
-      { resolve, schema, input: args },
+      { resolve, schema, input: args, contextResolver },
       ctxArgs
     ).call();
 
@@ -102,7 +102,6 @@ export const createMatcher = <
       } catch (err) {
         if (err instanceof Response && err.statusText === "ValidationError") {
           if (options?.throwValidationErrors === false) throw err;
-          console.log("RETURNING");
           return err;
         }
 
