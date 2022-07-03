@@ -1,7 +1,7 @@
-import { json } from '@remix-run/node';
-import { ContextResolverArgs, ResolverConfig } from './types';
-import { enums } from 'superstruct';
-import { validate } from './validation';
+import { json } from "@remix-run/node";
+import { ContextResolverArgs, ResolverConfig } from "./types";
+import { enums } from "superstruct";
+import { validate } from "./validation";
 
 class Resolver<T, S, C, R, CR> {
   resolver: ResolverConfig<T, S, C, R, CR>;
@@ -21,7 +21,7 @@ class Resolver<T, S, C, R, CR> {
     let ctx = null;
 
     if (this.resolver.resolveContext && this.ctxArgs) {
-      ctx = this.resolver.resolveContext({
+      ctx = await this.resolver.resolveContext({
         request: this.ctxArgs.request,
         data: this.ctxArgs?.data,
       });
@@ -35,7 +35,7 @@ class Resolver<T, S, C, R, CR> {
 export const createResolver = <T, S, C, R, CR>(
   resolverConfig: Pick<
     ResolverConfig<T, S, C, R, CR>,
-    'resolve' | 'schema' | 'resolveContext'
+    "resolve" | "schema" | "resolveContext"
   >
 ): ((
   args?: T extends object ? Record<keyof T, unknown> : unknown,
@@ -55,17 +55,16 @@ export const createResolver = <T, S, C, R, CR>(
   return res;
 };
 
-export type MatcherKeys<
-  T extends MatcherOutput<any, any>
-> = T['resolvers'] extends Record<infer N, unknown> ? N : never;
+export type MatcherKeys<T extends MatcherOutput<any, any>> =
+  T["resolvers"] extends Record<infer N, unknown> ? N : never;
 
 export type MatcherReturnType<
   T extends MatcherOutput<any, any>,
   K extends MatcherKeys<T>
-> = ReturnType<T['resolvers'][K]>;
+> = ReturnType<T["resolvers"][K]>;
 
 export type MatcherOutput<
-  K extends string | 'default',
+  K extends string | "default",
   R extends Record<K, () => unknown>
 > = {
   match: <K2 extends K>(
@@ -77,7 +76,7 @@ export type MatcherOutput<
 };
 
 export const createMatcher = <
-  K extends string | 'default',
+  K extends string | "default",
   R extends Record<K, () => unknown>
 >(
   resolvers: R
@@ -101,9 +100,9 @@ export const createMatcher = <
           return json(result, { status: 400 });
         }
       } catch (err) {
-        if (err instanceof Response && err.statusText === 'ValidationError') {
+        if (err instanceof Response && err.statusText === "ValidationError") {
           if (options?.throwValidationErrors === false) throw err;
-          console.log('RETURNING');
+          console.log("RETURNING");
           return err;
         }
 
