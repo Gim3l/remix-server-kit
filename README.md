@@ -4,8 +4,16 @@ Remix server kit provides useful utilities and simplifies validation for actions
 
 ## Installation
 
+### With Zod
+
 ```shell
-npm install remix-server-kit superstruct
+  npm install remix-server-kit zod
+```
+
+### With Superstruct
+
+```shell
+  npm install remix-server-kit superstruct
 ```
 
 ## Documentation
@@ -142,7 +150,47 @@ const createTask = createResolver({
 const task = createTask({ name: "Wash the dishes", deadline: new Date() });
 ```
 
-### Matchers
+## Error handling
+
+Errors from resolvers are outputted as a `ResolverError` and thrown responses (json, redirects) remain as Response objects.
+
+```ts
+type ResolverError = {
+  message: string;
+  data: T;
+  // the original error
+  cause: Error | null;
+};
+```
+
+Each resolver accepts and optional `errorFormatter` function that you can use to modify the shape of `ResolverError.data`.
+
+```ts
+const minus = createResolver({
+  // errors are thrown if safe mode is false, otherwise a call to minus will return {data?: number, error?: ResolverError<T> }
+  safeMode: true,
+  async errorFormatter({ validationError, error }) {
+    // will return ResolverError<{num1: string, num2: string}>
+    return {
+      num1: validationError?.data?.find(
+        (validationErr) => validationErr.path.join(".") == "numbers.num2"
+      )?.message,
+      num2: validationError?.data?.find(
+        (validationErr) => validationErr.path.join(".") == "numbers.num2"
+      )?.message,
+    };
+  },
+  schema: z.object({ numbers: { num1: z.number(), num2: z.number() } }),
+  context: authContext,
+  // typeof context = { userId: number }
+  async resolve({ name, deadline }, context) {},
+});
+
+const { data, error } = minus({ numbers: { num1: 200, num2: "200" } });
+const num2ErrorMsg = error?.num2;
+```
+
+## Matchers
 
 A common pattern in remix to handle multiple forms on a single route is set the `name` attribute of the submit button to `_action` and the `value` attribute to some value which indicates what "action" you want to perform.
 Remix Server Kit provides a `createMatcher` function to easily validate the `_action` value and the perform the requested "`_action`".

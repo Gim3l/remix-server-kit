@@ -96,6 +96,7 @@ describe("test resolvers", () => {
     expect(add({ num1: "200", num2: 200 })).resolves;
 
     const result = await add({ num1: "200", num2: "200" });
+
     expect(result.error).toBeInstanceOf(ResolverError);
     expect(result.error?.data.length).toBe(2);
     expect(result.data).toBe(null);
