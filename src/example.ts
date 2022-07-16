@@ -2,7 +2,6 @@ import { z } from "zod";
 import { createResolver } from "./resolvers";
 
 const add = createResolver({
-  safeMode: true,
   errorFormatter() {
     return 200;
   },

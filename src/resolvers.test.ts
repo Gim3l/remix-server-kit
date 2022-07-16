@@ -75,6 +75,14 @@ describe("test resolvers", () => {
     ["zod", z.object({ num1: z.number(), num2: z.number() })],
     ["superstruct", t.object({ num1: t.number(), num2: t.number() })],
   ])("safe mode works (%s)", async (_name, schema) => {
+    const minus = createResolver({
+      safeMode: true,
+      schema,
+      resolve({ num1, num2 }) {
+        return num1 - num2;
+      },
+    });
+
     const add = createResolver({
       safeMode: true,
       schema,
@@ -91,6 +99,9 @@ describe("test resolvers", () => {
     expect(result.error).toBeInstanceOf(ResolverError);
     expect(result.error?.data.length).toBe(2);
     expect(result.data).toBe(null);
+
+    const result2 = await minus({ num1: 200, num2: 300 });
+    expect(result2.data).toBe(-100);
   });
 
   test("arbritary errors can be formatter", async () => {
