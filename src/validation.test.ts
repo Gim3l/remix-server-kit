@@ -1,8 +1,9 @@
 import { test, describe, expect } from "vitest";
 
-import { validate, AssertEqual } from "./validation";
+import { validate } from "./validation";
 import { z } from "zod";
 import * as t from "superstruct";
+import { AssertEqual } from "./utils";
 
 describe("test validation", () => {
   test("validate works", () => {

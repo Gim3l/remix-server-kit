@@ -124,4 +124,18 @@ describe("test resolvers", () => {
 
     expect(result.error?.cause).toBeInstanceOf(TestError);
   });
+
+  test("error formatter param is correct", async () => {
+    const resolver = createResolver({
+      safeMode: true,
+      errorFormatter({ validationError, error }) {
+        expect(validationError?.data?.length).toBe(1);
+      },
+      async resolve() {
+        const a = async () => 20;
+        return a();
+      },
+      schema: z.object({ name: z.string().min(20) }),
+    });
+  });
 });

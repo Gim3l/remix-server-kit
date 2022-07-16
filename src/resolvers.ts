@@ -5,9 +5,8 @@ import {
   MatcherOutput,
   ResolverConfig,
 } from "./types";
-import { enums, StructError } from "superstruct";
+import { enums  } from "superstruct";
 import { TValidationError, validate, ResolverError } from "./validation";
-import { z } from "zod";
 
 class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
   resolver: ResolverConfig<T, S, C, R, CR, EF, ST>;
@@ -46,19 +45,23 @@ class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
         throw err;
       }
 
+      const isResolverError = err instanceof ResolverError
 
-        const error = this.resolver.errorFormatter ? (await this.resolver.errorFormatter({
-          validationError: err instanceof ResolverError && (err?.cause instanceof z.ZodError || err?.cause instanceof StructError) ? err : undefined,
-          error: err,
-        })) as Awaited<ValidationErrorType> : null;
 
+      const formattedError = this.resolver.errorFormatter ? (
+        await this.resolver.errorFormatter(
+           isResolverError && err?.message === "Error validating data" ?
+          { validationError: err, error: undefined} :
+          { validationError: undefined, error: err })
+      ) as Awaited<ValidationErrorType> : null;
 
         // convert formatted error to resolver error
         resolverError = new ResolverError<ValidationErrorType>(
           "Error validating data",
-          error ? error : err instanceof ResolverError<EF> ? err?.data : null,
+          formattedError ? formattedError : err instanceof ResolverError<EF> ? err?.data : null,
         err instanceof ResolverError<EF> ? err?.cause : (err as any)
         );
+      
 
         // when in safe mode, we don't throw the error
         if (this.resolver.safeMode) {
@@ -90,7 +93,7 @@ export const createResolver = <T, S, C, R, CR, EF, ST extends boolean>(
 ) => false extends typeof resolverConfig.safeMode
   ? R
   : Promise<{
-      data: R | null;
+      data: R extends Promise<unknown> ? (Awaited<R> | null) : (R | null);
       error: ResolverError<unknown extends EF ? TValidationError[] : EF> | null;
     }>) => {
   const { resolve, schema, context, errorFormatter, safeMode } =
