@@ -29,7 +29,7 @@ class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
 
     try {
       const schema = this.resolver.schema;
-      const validateInput = validate(this.resolver.input as any, schema as any);
+      const validatedInput = schema ? validate(this.resolver.input as any, schema as any) : this.resolver.input;
 
       let ctx = null;
 
@@ -40,7 +40,7 @@ class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
         });
       }
 
-      data = await this.resolver.resolve(validateInput as any, ctx as any);
+      data = await this.resolver.resolve(validatedInput as any, ctx as any);
     } catch (err) {
       if (err instanceof Response) {
         throw err;

@@ -67,8 +67,6 @@ const parseError = <T>(err: StructError | z.ZodError<T>) => {
     });
   }
 
-  console.log({ errors });
-
   return new ResolverError("Error validating data man", errors, err);
 };
 export const isValidationError = (err: unknown) => {

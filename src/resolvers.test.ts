@@ -10,6 +10,12 @@ import { json, Response, Headers } from "@remix-run/node";
 vi.stubGlobal("Headers", Headers);
 vi.stubGlobal("Response", Response);
 
+class TestError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
 describe("test resolvers", () => {
   test.each([
     ["zod", z.object({ num1: z.number(), num2: z.number() })],
@@ -44,7 +50,7 @@ describe("test resolvers", () => {
     ["superstruct", t.object({ num1: t.number(), num2: t.number() })],
   ])("can create resolver with formatter (%s)", async (_name, schema) => {
     const add = createResolver({
-      errorFormatter: ({ error, validationError }) => {
+      errorFormatter: ({ validationError }) => {
         return "Error when validating data" + validationError?.data?.length;
       },
       schema,
@@ -85,5 +91,25 @@ describe("test resolvers", () => {
     expect(result.error).toBeInstanceOf(ResolverError);
     expect(result.error?.data.length).toBe(2);
     expect(result.data).toBe(null);
+  });
+
+  test("arbritary errors can be formatter", async () => {
+    const resolver = createResolver({
+      safeMode: true,
+      errorFormatter: ({ error }) => {
+        if (error instanceof TestError) {
+          return error.message;
+        }
+
+        return error;
+      },
+      resolve() {
+        throw new TestError("test");
+      },
+    });
+
+    const result = await resolver({ name: "cool" });
+
+    expect(result.error?.cause).toBeInstanceOf(TestError);
   });
 });
