@@ -5,8 +5,9 @@ import {
   MatcherOutput,
   ResolverConfig,
 } from "./types";
-import { enums } from "superstruct";
-import { TValidationError, validate, ValidationError } from "./validation";
+import { enums, StructError } from "superstruct";
+import { TValidationError, validate, ResolverError } from "./validation";
+import { z } from "zod";
 
 class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
   resolver: ResolverConfig<T, S, C, R, CR, EF, ST>;
@@ -22,12 +23,9 @@ class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
 
   async call() {
     type ValidationErrorType = unknown extends EF ? TValidationError[] : EF;
-    // unknown extends typeof this.resolver.errorFormatter
-    //   ? TValidationError[]
-    //   : Awaited<EF>;
 
     let data: Awaited<R>;
-    let validationError: ValidationError<ValidationErrorType> | null;
+    let resolverError: ResolverError<ValidationErrorType> | null;
 
     try {
       const schema = this.resolver.schema;
@@ -44,29 +42,36 @@ class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
 
       data = await this.resolver.resolve(validateInput as any, ctx as any);
     } catch (err) {
-      if (err instanceof ValidationError && this.resolver.errorFormatter) {
-        // throw await this.resolver.errorFormatter({ error: err });
-        const error = (await this.resolver.errorFormatter({
-          error: err,
-        })) as Awaited<ValidationErrorType>;
-
-        validationError = new ValidationError<ValidationErrorType>(
-          "Error validating data",
-          error
-        );
-
-        if (this.resolver.safeValidation) {
-          return { data: null, validationError };
-        } else {
-          throw validationError;
-        }
+      if (err instanceof Response) {
+        throw err;
       }
 
-      throw err;
+
+        const error = this.resolver.errorFormatter ? (await this.resolver.errorFormatter({
+          validationError: err instanceof ResolverError && (err?.cause instanceof z.ZodError || err?.cause instanceof StructError) ? err : undefined,
+          error: err,
+        })) as Awaited<ValidationErrorType> : null;
+
+
+        // convert formatted error to resolver error
+        resolverError = new ResolverError<ValidationErrorType>(
+          "Error validating data",
+          error ? error : err instanceof ResolverError<EF> ? err?.data : null,
+        err instanceof ResolverError<EF> ? err?.cause : (err as any)
+        );
+
+        // when in safe mode, we don't throw the error
+        if (this.resolver.safeMode) {
+          return { data: null, error: resolverError };
+        } else {
+          throw resolverError;
+        }
+
+      
     }
 
-    if (this.resolver.safeValidation) {
-      return { data, validationError: null };
+    if (this.resolver.safeMode) {
+      return { data, error: null };
     } else {
       return data;
     }
@@ -77,20 +82,18 @@ class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
 export const createResolver = <T, S, C, R, CR, EF, ST extends boolean>(
   resolverConfig: Pick<
     ResolverConfig<T, S, C, R, CR, EF, ST>,
-    "resolve" | "schema" | "context" | "errorFormatter" | "safeValidation"
+    "resolve" | "schema" | "context" | "errorFormatter" | "safeMode"
   >
 ): ((
   args?: T extends object ? Record<keyof T, unknown> : unknown,
   ctxArgs?: ContextResolverArgs
-) => true extends typeof resolverConfig.safeValidation
+) => false extends typeof resolverConfig.safeMode
   ? R
   : Promise<{
       data: R | null;
-      validationError: ValidationError<
-        unknown extends EF ? TValidationError[] : EF
-      > | null;
+      error: ResolverError<unknown extends EF ? TValidationError[] : EF> | null;
     }>) => {
-  const { resolve, schema, context, errorFormatter, safeValidation } =
+  const { resolve, schema, context, errorFormatter, safeMode } =
     resolverConfig;
 
   const res = async (
@@ -98,7 +101,7 @@ export const createResolver = <T, S, C, R, CR, EF, ST extends boolean>(
     ctxArgs?: ContextResolverArgs
   ) => {
     return await new Resolver<T, S, C, R, CR, EF, ST>(
-      { resolve, schema, input: args, context, errorFormatter, safeValidation },
+      { resolve, schema, input: args, context, errorFormatter, safeMode },
       ctxArgs
     ).call();
   };

@@ -1,28 +1,27 @@
 import { Struct } from "superstruct";
 import { z } from "zod";
-import { TValidationError, ValidationError } from "./validation";
+import { TValidationError, ResolverError } from "./validation";
 
 export type ContextResolverArgs = { request: Request; data?: unknown };
 export type ContextResolver<CR> = (args: ContextResolverArgs) => CR;
 
-// export type ResolverFunction<T> = ReturnType<
-//   T extends (...args: any) => any ? T : () => unknown
-// >;
-
-// export type ResolverReturnType<T> = ReturnType<
-//   T extends (...args: any) => any
-//     ? ResolverFunction<T>['resolve']
-//     : (...args: any) => any
-// >;
-
 export type ErrorFormatter<T> = ({
   error,
 }: {
-  error: ValidationError<TValidationError[]>;
+  validationError?: ResolverError<TValidationError[]>;
+  error?: unknown;
 }) => T;
 
-export type ResolverConfig<T, S, _C, R, CR, EF, ST extends boolean> = {
-  safeValidation?: ST;
+export type ResolverConfig<
+  T = unknown,
+  S = unknown,
+  _C = unknown,
+  R = unknown,
+  CR = unknown,
+  EF = unknown,
+  ST = boolean
+> = {
+  safeMode?: ST;
   input?: T extends object ? Record<keyof T, unknown> : unknown;
   schema?: Struct<T, S> | z.ZodType<T>;
   context?: ContextResolver<CR>;
