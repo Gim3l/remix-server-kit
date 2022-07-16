@@ -1,14 +1,19 @@
 import { json } from "@remix-run/node";
-import { ContextResolverArgs, ResolverConfig } from "./types";
+import {
+  ContextResolverArgs,
+  MatcherKeys,
+  MatcherOutput,
+  ResolverConfig,
+} from "./types";
 import { enums } from "superstruct";
-import { validate } from "./validation";
+import { TValidationError, validate, ValidationError } from "./validation";
 
-class Resolver<T, S, C, R, CR> {
-  resolver: ResolverConfig<T, S, C, R, CR>;
+class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
+  resolver: ResolverConfig<T, S, C, R, CR, EF, ST>;
   ctxArgs?: ContextResolverArgs;
 
   constructor(
-    resolver: ResolverConfig<T, S, C, R, CR>,
+    resolver: ResolverConfig<T, S, C, R, CR, EF, ST>,
     ctxArgs?: ContextResolverArgs
   ) {
     this.resolver = resolver;
@@ -16,63 +21,89 @@ class Resolver<T, S, C, R, CR> {
   }
 
   async call() {
-    const schema = this.resolver.schema;
-    const validateInput = validate(this.resolver.input as any, schema as any);
-    let ctx = null;
+    type ValidationErrorType = unknown extends EF ? TValidationError[] : EF;
+    // unknown extends typeof this.resolver.errorFormatter
+    //   ? TValidationError[]
+    //   : Awaited<EF>;
 
-    if (this.resolver.context && this.ctxArgs) {
-      ctx = await this.resolver.context({
-        request: this.ctxArgs.request,
-        data: this.ctxArgs?.data,
-      });
+    let data: Awaited<R>;
+    let validationError: ValidationError<ValidationErrorType> | null;
+
+    try {
+      const schema = this.resolver.schema;
+      const validateInput = validate(this.resolver.input as any, schema as any);
+
+      let ctx = null;
+
+      if (this.resolver.context && this.ctxArgs) {
+        ctx = await this.resolver.context({
+          request: this.ctxArgs.request,
+          data: this.ctxArgs?.data,
+        });
+      }
+
+      data = await this.resolver.resolve(validateInput as any, ctx as any);
+    } catch (err) {
+      if (err instanceof ValidationError && this.resolver.errorFormatter) {
+        // throw await this.resolver.errorFormatter({ error: err });
+        const error = (await this.resolver.errorFormatter({
+          error: err,
+        })) as Awaited<ValidationErrorType>;
+
+        validationError = new ValidationError<ValidationErrorType>(
+          "Error validating data",
+          error
+        );
+
+        if (this.resolver.safeValidation) {
+          return { data: null, validationError };
+        } else {
+          throw validationError;
+        }
+      }
+
+      throw err;
     }
 
-    return this.resolver.resolve(validateInput as any, ctx as any);
+    if (this.resolver.safeValidation) {
+      return { data, validationError: null };
+    } else {
+      return data;
+    }
   }
 }
 
 /** Create a resolver */
-export const createResolver = <T, S, C, R, CR>(
+export const createResolver = <T, S, C, R, CR, EF, ST extends boolean>(
   resolverConfig: Pick<
-    ResolverConfig<T, S, C, R, CR>,
-    "resolve" | "schema" | "context"
+    ResolverConfig<T, S, C, R, CR, EF, ST>,
+    "resolve" | "schema" | "context" | "errorFormatter" | "safeValidation"
   >
 ): ((
   args?: T extends object ? Record<keyof T, unknown> : unknown,
   ctxArgs?: ContextResolverArgs
-) => Promise<R>) => {
-  const { resolve, schema, context } = resolverConfig;
+) => true extends typeof resolverConfig.safeValidation
+  ? R
+  : Promise<{
+      data: R | null;
+      validationError: ValidationError<
+        unknown extends EF ? TValidationError[] : EF
+      > | null;
+    }>) => {
+  const { resolve, schema, context, errorFormatter, safeValidation } =
+    resolverConfig;
 
   const res = async (
     args?: T extends object ? Record<keyof T, unknown> : unknown,
     ctxArgs?: ContextResolverArgs
-  ) =>
-    await new Resolver<T, S, C, R, CR>(
-      { resolve, schema, input: args, context },
+  ) => {
+    return await new Resolver<T, S, C, R, CR, EF, ST>(
+      { resolve, schema, input: args, context, errorFormatter, safeValidation },
       ctxArgs
     ).call();
+  };
 
-  return res;
-};
-
-export type MatcherKeys<T extends MatcherOutput<any, any>> =
-  T["resolvers"] extends Record<infer N, unknown> ? N : never;
-
-export type MatcherReturnType<
-  T extends MatcherOutput<any, any>,
-  K extends MatcherKeys<T>
-> = ReturnType<T["resolvers"][K]>;
-
-export type MatcherOutput<
-  K extends string | "default",
-  R extends Record<K, () => unknown>
-> = {
-  match: <K2 extends K>(
-    key: K2,
-    options?: { toResponse?: boolean; throwValidationErrors?: boolean }
-  ) => Promise<ReturnType<R[K2]> | Response>;
-  validate: (key: unknown) => MatcherKeys<MatcherOutput<K, R>>;
-  resolvers: R;
+  return res as any;
 };
 
 export const createMatcher = <

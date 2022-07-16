@@ -7,6 +7,7 @@ export const getList = createResolver({
     return { user: { userId: 20 } };
   },
   resolve(data, ctx) {
+    console.log({ ctx });
     return [1, 2, 3, ctx.user.userId, data];
   },
 });
