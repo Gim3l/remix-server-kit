@@ -1,4 +1,4 @@
-import { Struct } from "superstruct";
+import { Infer, Struct } from "superstruct";
 import { z } from "zod";
 import { TValidationError, ResolverError } from "./validation";
 
@@ -12,9 +12,14 @@ export type ErrorFormatter<T> = ({
   error?: unknown;
 }) => T;
 
+export type SchemaType<S = unknown> = S extends Struct<any, any>
+  ? Infer<S>
+  : S extends z.ZodTypeAny
+  ? z.infer<S>
+  : S;
+
 export type ResolverConfig<
-  T = unknown,
-  S = unknown,
+  S extends Struct<any, any> | z.ZodTypeAny,
   _C = unknown,
   R = unknown,
   CR = unknown,
@@ -22,10 +27,15 @@ export type ResolverConfig<
   ST = boolean
 > = {
   safeMode?: ST;
-  input?: T extends object ? Record<keyof T, unknown> : unknown;
-  schema?: Struct<T, S> | z.ZodType<T>;
+  input?: SchemaType<S> extends object
+    ? Record<keyof SchemaType<S>, unknown>
+    : unknown;
+  schema?: S;
   context?: ContextResolver<CR>;
-  resolve: (validatedInput: T extends null ? null : T, ctx: Awaited<CR>) => R;
+  resolve: (
+    validatedInput: SchemaType<S> extends null ? null : SchemaType<S>,
+    ctx: Awaited<CR>
+  ) => R;
   errorFormatter?: ErrorFormatter<EF>;
 };
 

@@ -4,16 +4,18 @@ import {
   MatcherKeys,
   MatcherOutput,
   ResolverConfig,
+  SchemaType,
 } from "./types";
-import { enums  } from "superstruct";
+import { enums, Struct  } from "superstruct";
 import { TValidationError, validate, ResolverError } from "./validation";
+import { z } from "zod";
 
-class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
-  resolver: ResolverConfig<T, S, C, R, CR, EF, ST>;
+class Resolver<S extends Struct<any, any> | z.ZodTypeAny, C, R, CR, EF, ST extends boolean> {
+  resolver: ResolverConfig<S, C, R, CR, EF, ST>;
   ctxArgs?: ContextResolverArgs;
 
   constructor(
-    resolver: ResolverConfig<T, S, C, R, CR, EF, ST>,
+    resolver: ResolverConfig<S, C, R, CR, EF, ST>,
     ctxArgs?: ContextResolverArgs
   ) {
     this.resolver = resolver;
@@ -81,14 +83,15 @@ class Resolver<T, S, C, R, CR, EF, ST extends boolean> {
   }
 }
 
+
 /** Create a resolver */
-export const createResolver = <T, S, C, R, CR, EF, ST extends boolean>(
+export const createResolver = <S extends Struct<any, any> | z.ZodTypeAny, C, R, CR, EF, ST extends boolean>(
   resolverConfig: Pick<
-    ResolverConfig<T, S, C, R, CR, EF, ST>,
+    ResolverConfig<S, C, R, CR, EF, ST>,
     "resolve" | "schema" | "context" | "errorFormatter" | "safeMode"
   >
 ): ((
-  args?: T extends object ? Record<keyof T, unknown> : unknown,
+  args?: SchemaType<S> extends object ? Record<keyof SchemaType<S>, unknown> : unknown,
   ctxArgs?: ContextResolverArgs
 ) => false extends typeof resolverConfig.safeMode
   ? R
@@ -100,10 +103,10 @@ export const createResolver = <T, S, C, R, CR, EF, ST extends boolean>(
     resolverConfig;
 
   const res = async (
-    args?: T extends object ? Record<keyof T, unknown> : unknown,
+    args?: SchemaType<S> extends object ? Record<keyof SchemaType<S>, unknown> : unknown,
     ctxArgs?: ContextResolverArgs
   ) => {
-    return await new Resolver<T, S, C, R, CR, EF, ST>(
+    return await new Resolver<S, C, R, CR, EF, ST>(
       { resolve, schema, input: args, context, errorFormatter, safeMode },
       ctxArgs
     ).call();
