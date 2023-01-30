@@ -19,24 +19,30 @@ export type SchemaType<S = unknown> = S extends Struct<any, any>
   : S;
 
 export type ResolverConfig<
-  S extends Struct<any, any> | z.ZodTypeAny,
+  Schema extends Struct<any, any> | z.ZodTypeAny,
   _C = unknown,
-  R = unknown,
-  CR = unknown,
-  EF = unknown,
+  Result = unknown,
+  IContextResolver = unknown,
+  ErrorFormat = unknown,
   ST = boolean
 > = {
   safeMode?: ST;
-  input?: SchemaType<S> extends object
-    ? Record<keyof SchemaType<S>, unknown>
+  input?: SchemaType<Schema> extends object
+    ? Record<keyof SchemaType<Schema>, unknown>
     : unknown;
-  schema?: S;
-  context?: ContextResolver<CR>;
+  schema?: Schema;
+  context?: ContextResolver<IContextResolver>;
   resolve: (
-    validatedInput: SchemaType<S> extends null ? null : SchemaType<S>,
-    ctx: Awaited<CR>
-  ) => R;
-  errorFormatter?: ErrorFormatter<EF>;
+    validatedInput: SchemaType<Schema> extends null ? null : SchemaType<Schema>,
+    ctx: Awaited<IContextResolver>,
+    event: ResolverEvent<Schema>
+  ) => Result;
+  errorFormatter?: ErrorFormatter<ErrorFormat>;
+};
+
+type ResolverEvent<Schema> = {
+  fail: <T>(data: T, status: number) => FailResult<Schema, T>;
+  success: <T>(data: T, status?: number) => SuccessResult<T>;
 };
 
 export type MatcherKeys<T extends MatcherOutput<any, any>> =
@@ -57,4 +63,17 @@ export type MatcherOutput<
   ) => Promise<ReturnType<R[K2]> | Response>;
   validate: (key: unknown) => MatcherKeys<MatcherOutput<K, R>>;
   resolvers: R;
+};
+
+export type FailResult<Schema, Data> = {
+  success: false;
+  status: number;
+  fail: Data;
+  schemaErrors?: z.ZodError<Schema>;
+};
+
+export type SuccessResult<T> = {
+  success: true;
+  status: number;
+  data: T;
 };

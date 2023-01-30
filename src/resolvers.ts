@@ -1,21 +1,21 @@
-import { json } from "@remix-run/node";
 import {
   ContextResolverArgs,
-  MatcherKeys,
-  MatcherOutput,
+  // MatcherKeys,
+  // MatcherOutput,
   ResolverConfig,
   SchemaType,
+  SuccessResult,
 } from "./types";
-import { enums, Struct  } from "superstruct";
-import { TValidationError, validate, ResolverError } from "./validation";
+import { validate } from "./validation";
 import { z } from "zod";
+import { fail, success } from "./events";
 
-class Resolver<S extends Struct<any, any> | z.ZodTypeAny, C, R, CR, EF, ST extends boolean> {
-  resolver: ResolverConfig<S, C, R, CR, EF, ST>;
+class Resolver<Schema extends z.ZodTypeAny, Context, Result, IContextResolver> {
+  resolver: ResolverConfig<Schema, Context, Result, IContextResolver>;
   ctxArgs?: ContextResolverArgs;
 
   constructor(
-    resolver: ResolverConfig<S, C, R, CR, EF, ST>,
+    resolver: ResolverConfig<Schema, Context, Result, IContextResolver>,
     ctxArgs?: ContextResolverArgs
   ) {
     this.resolver = resolver;
@@ -23,91 +23,64 @@ class Resolver<S extends Struct<any, any> | z.ZodTypeAny, C, R, CR, EF, ST exten
   }
 
   async call() {
-    type ValidationErrorType = unknown extends EF ? TValidationError[] : EF;
+    let data: Awaited<Result>;
 
-    let data: Awaited<R>;
-    let resolverError: ResolverError<ValidationErrorType> | null;
+    const schema = this.resolver.schema;
+    const validatedInput = schema?.safeParse(this.resolver.input);
 
-    try {
-      const schema = this.resolver.schema;
-      const validatedInput = schema ? validate(this.resolver.input as any, schema as any) : this.resolver.input;
-
-      let ctx = null;
-
-      if (this.resolver.context && this.ctxArgs) {
-        ctx = await this.resolver.context({
-          request: this.ctxArgs.request,
-          data: this.ctxArgs?.data,
-        });
-      }
-
-      data = await this.resolver.resolve(validatedInput as any, ctx as any);
-    } catch (err) {
-      if (err instanceof Response) {
-        throw err;
-      }
-
-      const isResolverError = err instanceof ResolverError
-
-
-      const formattedError = this.resolver.errorFormatter ? (
-        await this.resolver.errorFormatter(
-           isResolverError && err?.message === "Error validating data" ?
-          { validationError: err, error: undefined} :
-          { validationError: undefined, error: err })
-      ) as Awaited<ValidationErrorType> : null;
-
-        // convert formatted error to resolver error
-        resolverError = new ResolverError<ValidationErrorType>(
-          "Error validating data",
-          formattedError ? formattedError : err instanceof ResolverError<EF> ? err?.data : null,
-        err instanceof ResolverError<EF> ? err?.cause : (err as any)
-        );
-      
-
-        // when in safe mode, we don't throw the error
-        if (this.resolver.safeMode) {
-          return { data: null, error: resolverError };
-        } else {
-          throw resolverError;
-        }
-
-      
+    if (schema && !validatedInput?.success) {
+      return fail(null, 400, validatedInput?.error);
     }
 
-    if (this.resolver.safeMode) {
-      return { data, error: null };
-    } else {
+    let ctx = null;
+
+    if (this.resolver.context && this.ctxArgs) {
+      ctx = await this.resolver.context({
+        request: this.ctxArgs.request,
+        data: this.ctxArgs?.data,
+      });
+    }
+
+    data = await this.resolver.resolve(validatedInput as any, ctx as any, {
+      fail,
+      success,
+    });
+
+    if ((data as SuccessResult<Result>).success) {
       return data;
     }
+
+    return success(data);
   }
 }
 
-
 /** Create a resolver */
-export const createResolver = <S extends Struct<any, any> | z.ZodTypeAny, C, R, CR, EF, ST extends boolean>(
+export const createResolver = <
+  Schema extends z.ZodTypeAny,
+  Context,
+  Result,
+  IContextResolver
+>(
   resolverConfig: Pick<
-    ResolverConfig<S, C, R, CR, EF, ST>,
-    "resolve" | "schema" | "context" | "errorFormatter" | "safeMode"
+    ResolverConfig<Schema, Context, Result, IContextResolver>,
+    "resolve" | "schema" | "context"
   >
 ): ((
-  args?: SchemaType<S> extends object ? Record<keyof SchemaType<S>, unknown> : unknown,
+  args?: SchemaType<Schema> extends object
+    ? Record<keyof SchemaType<Schema>, unknown>
+    : unknown,
   ctxArgs?: ContextResolverArgs
-) => false extends typeof resolverConfig.safeMode
-  ? R
-  : Promise<{
-      data: R extends Promise<unknown> ? (Awaited<R> | null) : (R | null);
-      error: ResolverError<unknown extends EF ? TValidationError[] : EF> | null;
-    }>) => {
-  const { resolve, schema, context, errorFormatter, safeMode } =
-    resolverConfig;
+) => Result) => {
+  const { resolve, schema, context } = resolverConfig;
 
   const res = async (
-    args?: SchemaType<S> extends object ? Record<keyof SchemaType<S>, unknown> : unknown,
+    args?: SchemaType<Schema> extends object
+      ? Record<keyof SchemaType<Schema>, unknown>
+      : unknown,
     ctxArgs?: ContextResolverArgs
   ) => {
-    return await new Resolver<S, C, R, CR, EF, ST>(
-      { resolve, schema, input: args, context, errorFormatter, safeMode },
+    return await new Resolver<Schema, Context, Result, IContextResolver>(
+      { resolve, schema, input: args, context },
       ctxArgs
     ).call();
   };
@@ -115,44 +88,44 @@ export const createResolver = <S extends Struct<any, any> | z.ZodTypeAny, C, R, 
   return res as any;
 };
 
-export const createMatcher = <
-  K extends string | "default",
-  R extends Record<K, () => unknown>
->(
-  resolvers: R
-): MatcherOutput<K, R> => {
-  return {
-    resolvers,
-    async match<K2 extends K>(
-      key: K2,
-      options?: { toResponse?: boolean; throwValidationErrors?: boolean }
-    ): Promise<ReturnType<R[K2]> | Response> {
-      try {
-        const result = await resolvers[key]();
+// export const createMatcher = <
+//   K extends string | "default",
+//   R extends Record<K, () => unknown>
+// >(
+//   resolvers: R
+// ): MatcherOutput<K, R> => {
+//   return {
+//     resolvers,
+//     async match<K2 extends K>(
+//       key: K2,
+//       options?: { toResponse?: boolean; throwValidationErrors?: boolean }
+//     ): Promise<ReturnType<R[K2]> | Response> {
+//       try {
+//         const result = await resolvers[key]();
 
-        if (options?.toResponse === false) {
-          return result as Promise<ReturnType<R[K2]>>;
-        } else {
-          if (result instanceof Response) {
-            return result;
-          }
+//         if (options?.toResponse === false) {
+//           return result as Promise<ReturnType<R[K2]>>;
+//         } else {
+//           if (result instanceof Response) {
+//             return result;
+//           }
 
-          return json(result, { status: 400 });
-        }
-      } catch (err) {
-        if (err instanceof Response && err.statusText === "ValidationError") {
-          if (options?.throwValidationErrors === false) throw err;
-          return err;
-        }
+//           return json(result, { status: 400 });
+//         }
+//       } catch (err) {
+//         if (err instanceof Response && err.statusText === "ValidationError") {
+//           if (options?.throwValidationErrors === false) throw err;
+//           return err;
+//         }
 
-        throw err;
-      }
-    },
-    /** Ensures the supplied key matches the keys  */
-    validate(key): MatcherKeys<MatcherOutput<K, R>> {
-      const keys = Object.keys(resolvers);
-      const result = validate(key, enums(keys));
-      return result as MatcherKeys<MatcherOutput<K, R>>;
-    },
-  };
-};
+//         throw err;
+//       }
+//     },
+//     /** Ensures the supplied key matches the keys  */
+//     validate(key): MatcherKeys<MatcherOutput<K, R>> {
+//       const keys = Object.keys(resolvers);
+//       const result = validate(key, enums(keys));
+//       return result as MatcherKeys<MatcherOutput<K, R>>;
+//     },
+//   };
+// };

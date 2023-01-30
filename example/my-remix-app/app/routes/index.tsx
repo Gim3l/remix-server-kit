@@ -1,9 +1,9 @@
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { getList } from "~/resolvers/list.server";
+// import { getList } from "~/resolvers/list.server";
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const list = await getList(20, { request });
+  // const list = await getList(20, { request });
 
   return json({ list });
 };
