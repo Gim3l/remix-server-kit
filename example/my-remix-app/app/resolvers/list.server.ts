@@ -1,13 +1,17 @@
-import { number } from "superstruct";
-import { createResolver } from "~/lib/remix-server-kit/src";
+import { z } from "zod";
+import { createResolver } from "../../../../src";
 
 export const getList = createResolver({
-  schema: number(),
+  schema: z.object({ name: z.string() }),
   context: ({ request }) => {
     return { user: { userId: 20 } };
   },
-  resolve(data, ctx) {
-    console.log({ ctx });
-    return [1, 2, 3, ctx.user.userId, data];
+  resolve({ name }, ctx, ev) {
+    console.log({ name });
+    if (name === "error") {
+      return ev.fail({ message: "custom error" }, 400);
+    }
+
+    return ev.success([1, 2, 3, ctx.user.userId, name]);
   },
 });

@@ -13,12 +13,19 @@ const authContext = createContextResolver({
 //   fail: T
 // }
 
-const schema = z.object({ input1: z.number(), input2: z.array(z.string()) });
+const schema = z.object({
+  input1: z.number(),
+  input2: z.array(z.string()),
+  input3: z.object({
+    a: z.number(),
+    b: z.object({ c: z.number(), d: z.array(z.number()) }),
+  }),
+});
 
 const resolver = createResolver({
   context: authContext,
   schema,
-  async resolve({ input1, input2 }, { token }, ev) {
+  async resolve({ input1, input2, input3 }, { token }, ev) {
     if (token) {
       return ev.success({ message: "hello" });
     } else {
@@ -27,7 +34,11 @@ const resolver = createResolver({
   },
 });
 
-const result = await resolver({ a: "", b: [] });
+const result = await resolver({
+  input1: 20,
+  input2: ["test", "dfd"],
+  input3: { a: 20, b: { c: 20, d: [] } },
+});
 
 if (result.success) {
   result?.data.message;

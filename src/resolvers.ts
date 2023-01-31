@@ -7,7 +7,7 @@ import {
   SuccessResult,
 } from "./types";
 import { validate } from "./validation";
-import { z } from "zod";
+import { z, ZodUnknown } from "zod";
 import { fail, success } from "./events";
 
 class Resolver<Schema extends z.ZodTypeAny, Context, Result, IContextResolver> {
@@ -28,31 +28,65 @@ class Resolver<Schema extends z.ZodTypeAny, Context, Result, IContextResolver> {
     const schema = this.resolver.schema;
     const validatedInput = schema?.safeParse(this.resolver.input);
 
-    if (schema && !validatedInput?.success) {
+    if (!validatedInput?.success) {
       return fail(null, 400, validatedInput?.error);
-    }
+    } else {
+      let ctx = null;
+      console.log({ test: this.ctxArgs?.data });
 
-    let ctx = null;
+      if (this.resolver.context && this.ctxArgs) {
+        ctx = await this.resolver.context({
+          request: this.ctxArgs.request,
+          data: this.ctxArgs?.data,
+        });
+      }
 
-    if (this.resolver.context && this.ctxArgs) {
-      ctx = await this.resolver.context({
-        request: this.ctxArgs.request,
-        data: this.ctxArgs?.data,
-      });
-    }
+      data = await this.resolver.resolve(
+        validatedInput?.data as any,
+        ctx as any,
+        {
+          fail,
+          success,
+        }
+      );
 
-    data = await this.resolver.resolve(validatedInput as any, ctx as any, {
-      fail,
-      success,
-    });
+      if ((data as SuccessResult<Result>).success) {
+        return data;
+      }
 
-    if ((data as SuccessResult<Result>).success) {
       return data;
     }
-
-    return success(data);
   }
 }
+
+// typescript convert all types of an object to unknown
+// type UnknownProps<Schema> = SchemaType<Schema> extends object
+//   ? Record<keyof SchemaType<Schema>, unknown>
+//   : unknown;
+
+// // now make it work for deep objects
+// type UnknownPropsDeep<Schema> = SchemaType<Schema> extends object
+//   ? {
+//       [K in keyof SchemaType<Schema>]: SchemaType<Schema>[K] extends object
+//         ? UnknownPropsDeep<SchemaType<Schema>[K]>
+//         : unknown;
+//     }
+//   : unknown;
+
+// ok, make it make arrays unknown too
+// type UnknownPropsDeep<Schema> = SchemaType<Schema> extends object
+//   ? {
+//       [K in keyof SchemaType<Schema>]: SchemaType<Schema>[K] extends object
+//         ? UnknownPropsDeep<SchemaType<Schema>[K]>
+//         : SchemaType<Schema>[K] extends Array<infer U>
+//         ? Array<UnknownPropsDeep<U>>
+//         : unknown;
+//     }
+//   : unknown;
+
+// type UnknownProps<Schema> = SchemaType<Schema> extends object
+//   ? Record<keyof SchemaType<Schema>, unknown>
+//   : unknown;
 
 /** Create a resolver */
 export const createResolver = <
@@ -66,11 +100,9 @@ export const createResolver = <
     "resolve" | "schema" | "context"
   >
 ): ((
-  args?: SchemaType<Schema> extends object
-    ? Record<keyof SchemaType<Schema>, unknown>
-    : unknown,
+  args?: SchemaType<Schema>,
   ctxArgs?: ContextResolverArgs
-) => Result) => {
+) => Promise<Result>) => {
   const { resolve, schema, context } = resolverConfig;
 
   const res = async (

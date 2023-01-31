@@ -12,11 +12,7 @@ export type ErrorFormatter<T> = ({
   error?: unknown;
 }) => T;
 
-export type SchemaType<S = unknown> = S extends Struct<any, any>
-  ? Infer<S>
-  : S extends z.ZodTypeAny
-  ? z.infer<S>
-  : S;
+export type SchemaType<S = unknown> = S extends z.ZodTypeAny ? z.infer<S> : S;
 
 export type ResolverConfig<
   Schema extends Struct<any, any> | z.ZodTypeAny,
