@@ -26,10 +26,14 @@ const resolver = createResolver({
   context: authContext,
   schema,
   async resolve({ input1, input2, input3 }, { token }, ev) {
+    if (token === "sup") {
+      throw new Error("test");
+    }
+
     if (token) {
       return ev.success({ message: "hello" });
     } else {
-      return ev.fail({ message: "no token" }, 401);
+      return ev.fail({ message: "no token" }, 500);
     }
   },
 });
@@ -41,7 +45,7 @@ const result = await resolver({
 });
 
 if (result.success) {
-  result?.data.message;
+  result?.data?.message;
 } else {
   result.fail.message;
 

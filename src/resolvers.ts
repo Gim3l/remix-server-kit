@@ -1,5 +1,6 @@
 import {
   ContextResolverArgs,
+  FailResult,
   // MatcherKeys,
   // MatcherOutput,
   ResolverConfig,
@@ -9,6 +10,7 @@ import {
 import { validate } from "./validation";
 import { z, ZodUnknown } from "zod";
 import { fail, success } from "./events";
+import { errorCodes } from "./utils";
 
 class Resolver<Schema extends z.ZodTypeAny, Context, Result, IContextResolver> {
   resolver: ResolverConfig<Schema, Context, Result, IContextResolver>;
@@ -29,7 +31,7 @@ class Resolver<Schema extends z.ZodTypeAny, Context, Result, IContextResolver> {
     const validatedInput = schema?.safeParse(this.resolver.input);
 
     if (!validatedInput?.success) {
-      return fail(null, 400, validatedInput?.error);
+      return fail(null as any, 400, validatedInput?.error);
     } else {
       let ctx = null;
       console.log({ test: this.ctxArgs?.data });
@@ -47,14 +49,18 @@ class Resolver<Schema extends z.ZodTypeAny, Context, Result, IContextResolver> {
         {
           fail,
           success,
+          status: errorCodes,
         }
       );
 
-      if ((data as SuccessResult<Result>).success) {
-        return data;
+      // we need to check if the data is a success result, because the resolver might return a success result itself
+      if (
+        Object.keys(data as SuccessResult<Awaited<Result>>).includes("success")
+      ) {
+        return data as SuccessResult<Awaited<Result>>;
       }
 
-      return data;
+      return success(data);
     }
   }
 }
@@ -102,7 +108,9 @@ export const createResolver = <
 ): ((
   args?: SchemaType<Schema>,
   ctxArgs?: ContextResolverArgs
-) => Promise<Result>) => {
+) => Promise<
+  SuccessResult<Awaited<Result>> | FailResult<Schema, Awaited<Result>>
+>) => {
   const { resolve, schema, context } = resolverConfig;
 
   const res = async (

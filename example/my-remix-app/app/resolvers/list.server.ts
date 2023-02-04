@@ -3,15 +3,25 @@ import { createResolver } from "../../../../src";
 
 export const getList = createResolver({
   schema: z.object({ name: z.string() }),
-  context: ({ request }) => {
+  context: ({ request, data }) => {
     return { user: { userId: 20 } };
   },
-  resolve({ name }, ctx, ev) {
-    console.log({ name });
-    if (name === "error") {
-      return ev.fail({ message: "custom error" }, 400);
-    }
+  async resolve({ name }, { user }, { fail, status, success }) {
+    try {
+      if (user.userId !== 1) {
+        return fail(
+          { message: "You are not authorized!" },
+          status.UNAUTHORIZED
+        );
+      }
 
-    return ev.success([1, 2, 3, ctx.user.userId, name]);
+      if (name === "error") {
+        throw new Error("This should fail");
+      }
+
+      return success([1, 2, 3, user.userId, name], status.CREATED);
+    } catch (err) {
+      return fail({ message: "Something went wrong!" }, status.NOT_FOUND);
+    }
   },
 });

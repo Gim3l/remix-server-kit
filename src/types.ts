@@ -1,5 +1,5 @@
-import { Infer, Struct } from "superstruct";
 import { z } from "zod";
+import { errorCodes } from "./utils";
 import { TValidationError, ResolverError } from "./validation";
 
 export type ContextResolverArgs = { request: Request; data?: unknown };
@@ -15,7 +15,7 @@ export type ErrorFormatter<T> = ({
 export type SchemaType<S = unknown> = S extends z.ZodTypeAny ? z.infer<S> : S;
 
 export type ResolverConfig<
-  Schema extends Struct<any, any> | z.ZodTypeAny,
+  Schema extends z.ZodTypeAny,
   _C = unknown,
   Result = unknown,
   IContextResolver = unknown,
@@ -31,7 +31,7 @@ export type ResolverConfig<
   resolve: (
     validatedInput: SchemaType<Schema> extends null ? null : SchemaType<Schema>,
     ctx: Awaited<IContextResolver>,
-    event: ResolverEvent<Schema>
+    event: ResolverEvent<Schema> & { status: typeof errorCodes }
   ) => Result;
   errorFormatter?: ErrorFormatter<ErrorFormat>;
 };
