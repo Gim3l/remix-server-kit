@@ -1,16 +1,32 @@
 import { z } from "zod";
-import { FailResult, SuccessResult } from "./types";
+import { FailResult, SchemaConfig, SuccessResult } from "./types";
 
-export function fail<Schema = unknown, Data = unknown>(
+export function fail<
+  Schema extends z.ZodType,
+  TSchemaConfig extends SchemaConfig,
+  Data = unknown
+>(
   data: Data,
   status: number,
-  schemaErrors?: z.ZodError<Schema>
-): FailResult<Schema, Data> {
+  schemaErrors?: z.ZodError<Schema>,
+  schemaConfig?: TSchemaConfig
+): FailResult<Schema, Data, TSchemaConfig> {
+  // set tye type of schemaValidationErrors to the correct type based on the schemaConfig format
+  let schemaValidationErrors: unknown = schemaErrors;
+
+  if (schemaConfig?.formatErr) {
+    schemaValidationErrors = schemaErrors?.format();
+  }
+
+  if (schemaConfig?.flattenErr) {
+    schemaValidationErrors = schemaErrors?.flatten();
+  }
+
   return {
     status,
     success: false,
     fail: data,
-    schemaErrors,
+    schemaErrors: schemaValidationErrors as any,
   };
 }
 

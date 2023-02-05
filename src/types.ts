@@ -17,27 +17,43 @@ export type SchemaType<S = unknown> = S extends z.ZodTypeAny ? z.infer<S> : S;
 export type ResolverConfig<
   Schema extends z.ZodTypeAny,
   _C = unknown,
-  Result = unknown,
   IContextResolver = unknown,
-  ErrorFormat = unknown,
-  ST = boolean
+  TSchemaConfig extends SchemaConfig = SchemaConfig,
+  ResolverResult = unknown
 > = {
-  safeMode?: ST;
   input?: SchemaType<Schema> extends object
     ? Record<keyof SchemaType<Schema>, unknown>
     : unknown;
   schema?: Schema;
   context?: ContextResolver<IContextResolver>;
-  resolve: (
+  resolve: <Result extends ResolverResult>(
     validatedInput: SchemaType<Schema> extends null ? null : SchemaType<Schema>,
     ctx: Awaited<IContextResolver>,
-    event: ResolverEvent<Schema> & { status: typeof errorCodes }
+    event: ResolverEvent<Schema, TSchemaConfig> & { status: typeof errorCodes }
   ) => Result;
-  errorFormatter?: ErrorFormatter<ErrorFormat>;
+
+  schemaConfig?: TSchemaConfig;
 };
 
-type ResolverEvent<Schema> = {
-  fail: <T>(data: T, status: number) => FailResult<Schema, T>;
+export type SchemaConfig =
+  | {
+      flattenErr: true;
+      formatErr?: false;
+      throwOnFail?: boolean;
+      errorMap?: z.ZodErrorMap;
+    }
+  | {
+      flattenErr?: false;
+      formatErr: true;
+      throwOnFail?: boolean;
+      errorMap?: z.ZodErrorMap;
+    };
+
+export type ResolverEvent<
+  Schema extends z.ZodType,
+  TSchemaConfig extends SchemaConfig
+> = {
+  fail: <T>(data: T, status: number) => FailResult<Schema, T, TSchemaConfig>;
   success: <T>(data: T, status?: number) => SuccessResult<T>;
 };
 
@@ -61,15 +77,32 @@ export type MatcherOutput<
   resolvers: R;
 };
 
-export type FailResult<Schema, Data> = {
+export type FailResult<
+  Schema extends z.ZodType,
+  Data,
+  TSchemaConfig extends SchemaConfig
+> = {
   success: false;
   status: number;
   fail: Data;
-  schemaErrors?: z.ZodError<Schema>;
+  schemaErrors?: TSchemaConfig["formatErr"] extends true
+    ? z.inferFormattedError<Schema> | undefined
+    : TSchemaConfig["flattenErr"] extends true
+    ? z.inferFlattenedErrors<Schema> | undefined
+    : z.ZodError<Schema> | undefined;
 };
 
-export type SuccessResult<T> = {
+export type SuccessResult<T = void> = {
   success: true;
-  status: number;
-  data: T;
+  result: T;
 };
+
+export type UnwrapSuccessResult<T> = T extends SuccessResult<infer U>
+  ? U
+  : never;
+
+export type UnwrapFailResult<
+  Schema extends z.ZodType,
+  T,
+  TSchemaConfig extends SchemaConfig
+> = T extends FailResult<Schema, infer U, TSchemaConfig> ? U : never;

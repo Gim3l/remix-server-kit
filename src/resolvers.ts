@@ -4,20 +4,25 @@ import {
   // MatcherKeys,
   // MatcherOutput,
   ResolverConfig,
+  SchemaConfig,
   SchemaType,
   SuccessResult,
 } from "./types";
-import { validate } from "./validation";
-import { z, ZodUnknown } from "zod";
+import { z } from "zod";
 import { fail, success } from "./events";
 import { errorCodes } from "./utils";
 
-class Resolver<Schema extends z.ZodTypeAny, Context, Result, IContextResolver> {
-  resolver: ResolverConfig<Schema, Context, Result, IContextResolver>;
+class Resolver<
+  Schema extends z.ZodTypeAny,
+  Context,
+  IContextResolver,
+  TSchemaConfig extends SchemaConfig
+> {
+  resolver: ResolverConfig<Schema, Context, IContextResolver, TSchemaConfig>;
   ctxArgs?: ContextResolverArgs;
 
   constructor(
-    resolver: ResolverConfig<Schema, Context, Result, IContextResolver>,
+    resolver: ResolverConfig<Schema, Context, IContextResolver, TSchemaConfig>,
     ctxArgs?: ContextResolverArgs
   ) {
     this.resolver = resolver;
@@ -25,13 +30,30 @@ class Resolver<Schema extends z.ZodTypeAny, Context, Result, IContextResolver> {
   }
 
   async call() {
-    let data: Awaited<Result>;
+    const resolverFn = this.resolver.resolve;
+    let data: ReturnType<typeof resolverFn>;
 
     const schema = this.resolver.schema;
-    const validatedInput = schema?.safeParse(this.resolver.input);
+    const validatedInput = schema?.safeParse(this.resolver.input, {
+      errorMap: this.resolver.schemaConfig?.errorMap,
+    });
 
     if (!validatedInput?.success) {
-      return fail(null as any, 400, validatedInput?.error);
+      if (this.resolver.schemaConfig?.throwOnFail) {
+        throw fail(
+          null as any,
+          errorCodes.BAD_REQUEST,
+          validatedInput?.error,
+          this.resolver.schemaConfig
+        );
+      } else {
+        return fail(
+          null as any,
+          errorCodes.BAD_REQUEST,
+          validatedInput?.error,
+          this.resolver.schemaConfig
+        );
+      }
     } else {
       let ctx = null;
       console.log({ test: this.ctxArgs?.data });
@@ -55,9 +77,11 @@ class Resolver<Schema extends z.ZodTypeAny, Context, Result, IContextResolver> {
 
       // we need to check if the data is a success result, because the resolver might return a success result itself
       if (
-        Object.keys(data as SuccessResult<Awaited<Result>>).includes("success")
+        Object.keys(
+          data as SuccessResult<Awaited<ReturnType<typeof resolverFn>>>
+        ).includes("success")
       ) {
-        return data as SuccessResult<Awaited<Result>>;
+        return data;
       }
 
       return success(data);
@@ -98,20 +122,22 @@ class Resolver<Schema extends z.ZodTypeAny, Context, Result, IContextResolver> {
 export const createResolver = <
   Schema extends z.ZodTypeAny,
   Context,
-  Result,
-  IContextResolver
+  IContextResolver,
+  TSchemaConfig extends SchemaConfig,
+  ResolverResult = unknown
 >(
   resolverConfig: Pick<
-    ResolverConfig<Schema, Context, Result, IContextResolver>,
-    "resolve" | "schema" | "context"
+    ResolverConfig<
+      Schema,
+      Context,
+      IContextResolver,
+      TSchemaConfig,
+      ResolverResult
+    >,
+    "resolve" | "schema" | "context" | "schemaConfig"
   >
-): ((
-  args?: SchemaType<Schema>,
-  ctxArgs?: ContextResolverArgs
-) => Promise<
-  SuccessResult<Awaited<Result>> | FailResult<Schema, Awaited<Result>>
->) => {
-  const { resolve, schema, context } = resolverConfig;
+) => {
+  const { resolve, schema, context, schemaConfig } = resolverConfig;
 
   const res = async (
     args?: SchemaType<Schema> extends object
@@ -119,13 +145,14 @@ export const createResolver = <
       : unknown,
     ctxArgs?: ContextResolverArgs
   ) => {
-    return await new Resolver<Schema, Context, Result, IContextResolver>(
-      { resolve, schema, input: args, context },
+    return await new Resolver<Schema, Context, IContextResolver, TSchemaConfig>(
+      { resolve, schema, input: args, context, schemaConfig },
       ctxArgs
     ).call();
+    // ^?
   };
 
-  return res as any;
+  return res;
 };
 
 // export const createMatcher = <
