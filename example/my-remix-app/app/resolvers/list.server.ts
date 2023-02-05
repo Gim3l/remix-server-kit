@@ -1,12 +1,44 @@
 import { z } from "zod";
 import { createResolver } from "../../../../src";
 
+const listSchema = z.object({
+  age: z.number(),
+  name: z.string({
+    description: "Enter a valid name",
+    errorMap: (err) => ({
+      message: "Enter a valid name",
+    }),
+  }),
+});
+
+const customErrorMap: z.ZodErrorMap = (issue, ctx) => {
+  if (issue.code === z.ZodIssueCode.invalid_type) {
+    if (issue.expected === "string") {
+      return { message: "bad type!" };
+    }
+
+    if (issue.expected === "number") {
+      return { message: "that's not a number bro" };
+    }
+  }
+  if (issue.code === z.ZodIssueCode.custom) {
+    return { message: `less-than-${(issue.params || {}).minimum}` };
+  }
+  return { message: ctx.defaultError };
+};
+
 export const getList = createResolver({
-  schema: z.object({ name: z.string() }),
-  context: ({ request, data }) => {
-    return { user: { userId: 20 } };
+  schema: listSchema,
+  schemaConfig: {
+    formatErr: true,
+    // flattenErr: true,
+    // throwOnFail: false,
+    // errorMap: customErrorMap,
   },
-  async resolve({ name }, { user }, { fail, status, success }) {
+  context: ({ request, data }) => {
+    return { user: { userId: 1 } };
+  },
+  async resolve({ name, age }, { user }, { fail, status, success }) {
     try {
       if (user.userId !== 1) {
         return fail(
@@ -19,9 +51,15 @@ export const getList = createResolver({
         throw new Error("This should fail");
       }
 
-      return success([1, 2, 3, user.userId, name], status.CREATED);
+      return { userId: user.userId, age, name };
     } catch (err) {
       return fail({ message: "Something went wrong!" }, status.NOT_FOUND);
     }
   },
 });
+
+const schema = z.object({ name: z.string() });
+const result = schema.safeParse({ name: 1 });
+if (!result.success) {
+  console.log(result.error);
+}
