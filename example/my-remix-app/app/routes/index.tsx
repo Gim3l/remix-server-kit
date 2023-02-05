@@ -5,21 +5,14 @@ import { useState } from "react";
 import { getList } from "~/resolvers/list.server";
 
 export async function loader({ request }: LoaderArgs) {
-  const list = await getList(
-    { name: 12 as any, age: "as any" as any },
-    { request }
-  );
+  const list = await getList({
+    name: "20",
+    age: 20,
+  });
 
-  if (!list.success) {
-    const errors = list.schemaErrors;
-  }
-
-  return json(
-    {
-      list,
-    },
-    { status: list.status }
-  );
+  return json({
+    list,
+  });
 }
 export default function Index() {
   const loaderData = useLoaderData<typeof loader>();
@@ -35,16 +28,23 @@ export default function Index() {
         Count
       </button>
       <h1>Remix Server Kit Example</h1>
+
+      {loaderData?.list.success ? (
+        <>All good!</>
+      ) : (
+        <p>Resolver Error: {loaderData.list.resolverErr?.message} </p>
+      )}
+
+      {loaderData.list.success}
       <code>{JSON.stringify({ ...loaderData })}</code>
-      {loaderData.list}
       <div>{loaderData.list?.success ? <>Status: success</> : null}</div>
-      {loaderData.list?.success ? loaderData.list?.data.name : null}
-      {loaderData.list?.success ? loaderData.list?.data.age : null}
-      {loaderData.list?.success ? loaderData.list?.data.userId : null}
+      {loaderData.list?.success ? loaderData.list.info?.name : null}
+      {loaderData.list?.success ? loaderData.list?.info?.age : null}
+      {loaderData.list?.success ? loaderData.list?.info?.userId : null}
       <div>
         {!loaderData.list?.success ? (
           <>
-            <p>Name Error: {loaderData.list.schemaErrors?.name?._errors[0]}</p>
+            <p>Name Error: {loaderData.list.schemaErr?.name?._errors[0]}</p>
             <p>Schema Errors:</p>
             {/* {loaderData.list.schemaErrors?.map((error) => (
               <li key={error.message}>{error.message}</li>

@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { createResolver } from "../../../../src";
+import { createResolver, unstable_createResolver } from "../../../../src";
+import { ResolverError } from "../../../../src/updates";
+import { errorCodes } from "../../../../src/utils";
 
 const listSchema = z.object({
   age: z.number(),
@@ -27,39 +29,29 @@ const customErrorMap: z.ZodErrorMap = (issue, ctx) => {
   return { message: ctx.defaultError };
 };
 
-export const getList = createResolver({
+export const getList = unstable_createResolver({
   schema: listSchema,
   schemaConfig: {
     formatErr: true,
     // flattenErr: true,
-    // throwOnFail: false,
-    // errorMap: customErrorMap,
+    // throwOnFail: true,
+    errorMap: customErrorMap,
   },
-  context: ({ request, data }) => {
+  context: () => {
     return { user: { userId: 1 } };
   },
-  async resolve({ name, age }, { user }, { fail, status, success }) {
-    try {
-      if (user.userId !== 1) {
-        return fail(
-          { message: "You are not authorized!" },
-          status.UNAUTHORIZED
-        );
-      }
-
-      if (name === "error") {
-        throw new Error("This should fail");
-      }
-
-      return { userId: user.userId, age, name };
-    } catch (err) {
-      return fail({ message: "Something went wrong!" }, status.NOT_FOUND);
+  async resolve({ name, age }, { user }) {
+    if (name === "error") {
+      throw new ResolverError("Resolver failed!", errorCodes.BAD_REQUEST);
     }
+
+    return { userId: user.userId, age, name };
   },
 });
 
 const schema = z.object({ name: z.string() });
 const result = schema.safeParse({ name: 1 });
+
 if (!result.success) {
   console.log(result.error);
 }
