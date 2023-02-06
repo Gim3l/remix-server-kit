@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createContextResolver } from "./context";
-import { createResolver } from "./resolvers";
+import { createResolver } from "./resolvers_old";
 
 const authContext = createContextResolver({
   resolve() {

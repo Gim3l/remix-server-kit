@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { SchemaConfig } from "./types";
+
 export type AssertEqual<T, Expected> = [T] extends [Expected]
   ? [Expected] extends [T]
     ? true
@@ -14,3 +17,27 @@ export const errorCodes = {
   CONFLICT: 409 as 409,
   CREATED: 201 as 201,
 };
+
+export function formatErr<
+  Schema extends z.ZodType,
+  TSchemaConfig extends SchemaConfig
+>(
+  error: z.ZodError<Schema>,
+  schemaConfig: TSchemaConfig
+): TSchemaConfig["formatErr"] extends true
+  ? z.inferFormattedError<Schema> | undefined
+  : TSchemaConfig["flattenErr"] extends true
+  ? z.inferFlattenedErrors<Schema> | undefined
+  : z.ZodError<Schema> | undefined {
+  if (!schemaConfig) return error.errors as any;
+
+  if (schemaConfig?.formatErr) {
+    return error.format() as any;
+  }
+
+  if (schemaConfig?.flattenErr) {
+    return error.flatten() as any;
+  }
+
+  return error as any;
+}

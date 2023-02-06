@@ -1,5 +1,5 @@
 export * from "./types";
 export * from "./validation";
-export * from "./resolvers";
+export * from "./resolvers_old";
 export * from "./context";
-export * from "./updates";
+export * from "./resolvers";

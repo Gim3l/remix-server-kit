@@ -10,6 +10,7 @@ specifiers:
   '@types/react-dom': ^17.0.17
   compression: ^1.7.4
   cross-env: ^7.0.3
+  domain-functions: ^1.5.1
   eslint: ^8.15.0
   express: ^4.18.1
   morgan: ^1.10.0
@@ -17,7 +18,9 @@ specifiers:
   npm-run-all: ^4.1.5
   react: ^17.0.2
   react-dom: ^17.0.2
+  tslog: ^4.7.1
   typescript: ^4.6.4
+  zod: ^3.20.2
 
 dependencies:
   '@remix-run/express': 1.12.0_express@4.18.2
@@ -25,10 +28,13 @@ dependencies:
   '@remix-run/react': 1.12.0_sfoxds7t5ydpegc3knd667wn6m
   compression: 1.7.4
   cross-env: 7.0.3
+  domain-functions: 1.5.1_zod@3.20.2
   express: 4.18.2
   morgan: 1.10.0
   react: 17.0.2
   react-dom: 17.0.2_react@17.0.2
+  tslog: 4.7.1
+  zod: 3.20.2
 
 devDependencies:
   '@remix-run/dev': 1.12.0
@@ -3064,6 +3070,15 @@ packages:
   /dom-accessibility-api/0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
     dev: true
+
+  /domain-functions/1.5.1_zod@3.20.2:
+    resolution: {integrity: sha512-tLnau/Da1255iPMgu9UOs7yuoBjs5X1boZQEyu7xlz+WysYFUnGBlL5x0+h54++eGeQ5abS2AIKGbmg3b7dn6w==}
+    peerDependencies:
+      zod: ^3.19.1
+    dependencies:
+      qs: 6.11.0
+      zod: 3.20.2
+    dev: false
 
   /dotenv/16.0.3:
     resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
@@ -6922,6 +6937,11 @@ packages:
     resolution: {integrity: sha512-336iVw3rtn2BUK7ORdIAHTyxHGRIHVReokCR3XjbckJMK7ms8FysBfhLR8IXnAgy7T0PTPNBWKiH514FOW/WSg==}
     dev: true
 
+  /tslog/4.7.1:
+    resolution: {integrity: sha512-Ez90j4FKCUp9bBlgPq96aYDUbXRIOxz6Vxn/4Iw2/IiVxLB5wsUVkWfeK4oqdRMoW8qBVJz9oIT+ysjfyIRufw==}
+    engines: {node: '>=16'}
+    dev: false
+
   /tsutils/3.21.0_typescript@4.9.5:
     resolution: {integrity: sha512-mHKK3iUXL+3UF6xL5k0PEhKRUBKPBCv/+RkEOpjRWxxx27KKRBmmA60A9pgOUvMi8GKhRMPEmjBRPzs2W7O1OA==}
     engines: {node: '>= 6'}
@@ -7358,6 +7378,10 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
     dev: true
+
+  /zod/3.20.2:
+    resolution: {integrity: sha512-1MzNQdAvO+54H+EaK5YpyEy0T+Ejo/7YLHS93G3RnYWh5gaotGHwGeN/ZO687qEDU2y4CdStQYXVHIgrUl5UVQ==}
+    dev: false
 
   /zwitch/2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}

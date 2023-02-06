@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { createResolver, unstable_createResolver } from "../../../../src";
-import { ResolverError } from "../../../../src/updates";
-import { errorCodes } from "../../../../src/utils";
+import { createResolver, ResolverError } from "../../../../src/resolvers";
+import { Logger } from "tslog";
 
 const listSchema = z.object({
   age: z.number(),
@@ -29,29 +28,28 @@ const customErrorMap: z.ZodErrorMap = (issue, ctx) => {
   return { message: ctx.defaultError };
 };
 
-export const getList = unstable_createResolver({
+const logger = new Logger();
+
+export const getList = createResolver({
   schema: listSchema,
   schemaConfig: {
     formatErr: true,
     // flattenErr: true,
-    // throwOnFail: true,
+    throwOnFail: true,
     errorMap: customErrorMap,
   },
-  context: () => {
-    return { user: { userId: 1 } };
+  context: ({ input }: { input: string }) => {
+    return {
+      user: { userId: 1 },
+      logger,
+    };
   },
-  async resolve({ name, age }, { user }) {
+  async resolve({ name, age }, { user, logger }) {
     if (name === "error") {
-      throw new ResolverError("Resolver failed!", errorCodes.BAD_REQUEST);
+      logger.error("Something broke!", { name, age });
+      throw new ResolverError("Resolver failed!", "FORBIDDEN");
     }
 
-    return { userId: user.userId, age, name };
+    return { name, age, userId: user.userId };
   },
 });
-
-const schema = z.object({ name: z.string() });
-const result = schema.safeParse({ name: 1 });
-
-if (!result.success) {
-  console.log(result.error);
-}

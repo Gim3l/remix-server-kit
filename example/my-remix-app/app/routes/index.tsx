@@ -5,14 +5,26 @@ import { useState } from "react";
 import { getList } from "~/resolvers/list.server";
 
 export async function loader({ request }: LoaderArgs) {
-  const list = await getList({
-    name: "20",
-    age: 20,
-  });
+  const list = await getList(
+    {
+      name: "error",
+      age: 20,
+    },
+    { input: "sdf" }
+  );
 
-  return json({
-    list,
-  });
+  if (list.resolverErr) {
+    console.log(list.resolverErr.err);
+  }
+
+  return json(
+    {
+      list,
+    },
+    {
+      status: list.resolverErr?.status || 200,
+    }
+  );
 }
 export default function Index() {
   const loaderData = useLoaderData<typeof loader>();
@@ -38,7 +50,7 @@ export default function Index() {
       {loaderData.list.success}
       <code>{JSON.stringify({ ...loaderData })}</code>
       <div>{loaderData.list?.success ? <>Status: success</> : null}</div>
-      {loaderData.list?.success ? loaderData.list.info?.name : null}
+      {loaderData.list.success ? loaderData.list.info.name : null}
       {loaderData.list?.success ? loaderData.list?.info?.age : null}
       {loaderData.list?.success ? loaderData.list?.info?.userId : null}
       <div>
