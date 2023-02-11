@@ -29,7 +29,7 @@ export function formatErr<
   : TSchemaConfig["flattenErr"] extends true
   ? z.inferFlattenedErrors<Schema> | undefined
   : z.ZodError<Schema> | undefined {
-  if (!schemaConfig) return error.errors as any;
+  if (!schemaConfig) return error as any;
 
   if (schemaConfig?.formatErr) {
     return error.format() as any;

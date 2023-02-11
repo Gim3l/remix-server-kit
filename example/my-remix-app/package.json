@@ -9,6 +9,8 @@
     "start": "cross-env NODE_ENV=production node ./server.js"
   },
   "dependencies": {
+    "@conform-to/react": "^0.5.1",
+    "@conform-to/zod": "^0.5.1",
     "@remix-run/express": "^1.12.0",
     "@remix-run/node": "^1.12.0",
     "@remix-run/react": "^1.12.0",

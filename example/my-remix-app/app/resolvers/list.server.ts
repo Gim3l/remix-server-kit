@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createResolver, ResolverError } from "../../../../src/resolvers";
 import { Logger } from "tslog";
+import type { Submission } from "@conform-to/react";
 
 const listSchema = z.object({
   age: z.number(),
@@ -32,12 +33,12 @@ const logger = new Logger();
 
 export const getList = createResolver({
   schema: listSchema,
-  schemaConfig: {
-    formatErr: true,
-    // flattenErr: true,
-    throwOnFail: true,
-    errorMap: customErrorMap,
-  },
+  // schemaConfig: {
+  // formatErr: true,
+  // flattenErr: true,
+  // throwOnFail: true,
+  // errorMap: customErrorMap,
+  // },
   context: ({ input }: { input: string }) => {
     return {
       user: { userId: 1 },
@@ -51,5 +52,24 @@ export const getList = createResolver({
     }
 
     return { name, age, userId: user.userId };
+  },
+});
+
+export const sendMessageSchema = z.object({
+  name: z.string().min(5),
+  message: z.string().min(5),
+});
+
+export const sendMessage = createResolver({
+  schema: sendMessageSchema,
+  context: ({
+    submission,
+  }: {
+    submission: Submission<z.infer<typeof sendMessageSchema>>;
+  }) => ({ submission }),
+  async resolve({ name, message }, { submission }) {
+    if (submission.type === "submit") {
+      return { name, message };
+    }
   },
 });

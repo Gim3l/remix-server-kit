@@ -1,6 +1,8 @@
 lockfileVersion: 5.4
 
 specifiers:
+  '@conform-to/react': ^0.5.1
+  '@conform-to/zod': ^0.5.1
   '@remix-run/dev': ^1.12.0
   '@remix-run/eslint-config': ^1.6.3
   '@remix-run/express': ^1.12.0
@@ -23,6 +25,8 @@ specifiers:
   zod: ^3.20.2
 
 dependencies:
+  '@conform-to/react': 0.5.1_react@17.0.2
+  '@conform-to/zod': 0.5.1_zod@3.20.2
   '@remix-run/express': 1.12.0_express@4.18.2
   '@remix-run/node': 1.12.0
   '@remix-run/react': 1.12.0_sfoxds7t5ydpegc3knd667wn6m
@@ -1318,6 +1322,28 @@ packages:
       '@babel/helper-validator-identifier': 7.19.1
       to-fast-properties: 2.0.0
     dev: true
+
+  /@conform-to/dom/0.5.1:
+    resolution: {integrity: sha512-E7xONiO/HCNg1ta/9X5OeUAvfiex9OubRNs1R/86A9aYPVnlGbDTZNBeOoyTCAm/Y5/zXSa92S3NzhpjWYAmTg==}
+    dev: false
+
+  /@conform-to/react/0.5.1_react@17.0.2:
+    resolution: {integrity: sha512-IjDFdLs3HhKTNQ4Xrq56qwAE51McZYkhvLXgIUDYIukMeHW46oci2tQj05io40BZ27box0ICBwSslLqukDnpiQ==}
+    peerDependencies:
+      react: '>=16.8'
+    dependencies:
+      '@conform-to/dom': 0.5.1
+      react: 17.0.2
+    dev: false
+
+  /@conform-to/zod/0.5.1_zod@3.20.2:
+    resolution: {integrity: sha512-UPXsB2CyNY8aPq+LhgBqCLTp/WZK1j/KHlIW7/7mNPP9+EgVbw8GbjA+EgvP2AKsxs9z4ZfbF9mSn3yuNxOgZg==}
+    peerDependencies:
+      '@conform-to/dom': 0.5.1
+      zod: ^3.0.0
+    dependencies:
+      zod: 3.20.2
+    dev: false
 
   /@emotion/hash/0.9.0:
     resolution: {integrity: sha512-14FtKiHhy2QoPIzdTcvh//8OyBlknNs2nXRwIhG904opCby3l+9Xaf/wuPvICBF0rc1ZCNBd3nKe9cd2mecVkQ==}

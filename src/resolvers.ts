@@ -20,6 +20,7 @@ export const createResolver = <
   schema: Schema;
   schemaConfig?: TSchemaConfig;
   context?: ContextFn;
+  withConform?: boolean;
 }) => {
   return async function (
     input: SchemaType<Schema> extends object
