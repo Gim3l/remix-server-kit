@@ -1,5 +1,6 @@
-## Remix Server Kit
+> ## This project is NO longer maintained.
 
+## Remix Server Kit
 Remix server kit provides useful utilities and simplifies validation for actions and loaders.
 
 ## Installation
